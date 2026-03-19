@@ -1,0 +1,261 @@
+import { useEffect, useState } from "react";
+import { useRouter } from "next/router";
+import EmployeeLayout from "../components/EmployeeLayout";
+
+const fileFields = ["cvFile", "passportFile", "visaFile", "policeLetterFile", "certificateFile", "drivingLicenceFile", "profilePhoto"];
+
+const hiddenFields = [
+  "id", "password", "passwordHash", "salesforceId",
+  "createdAt", "updatedAt", "resetToken", "resetTokenExpiry",
+  "iban", "bic", "bankName", "accountHolder",
+];
+
+function formatLabel(key) {
+  const labels = {
+    firstName: "Vorname", lastName: "Nachname", email: "E-Mail", phone: "Telefon",
+    street: "Strasse", city: "Stadt", zip: "PLZ", country: "Land",
+    birthDate: "Geburtsdatum", nationality: "Nationalität", gender: "Geschlecht",
+    maritalStatus: "Zivilstand", languages: "Sprachen", education: "Ausbildung",
+    experience: "Erfahrung", skills: "Fähigkeiten", notes: "Notizen",
+    status: "Status", role: "Rolle", ahv: "AHV-Nummer",
+    cvFile: "Lebenslauf (CV)", passportFile: "Reisepass", visaFile: "Visum",
+    policeLetterFile: "Polizeiliches Führungszeugnis", certificateFile: "Zertifikate",
+    drivingLicenceFile: "Führerschein", profilePhoto: "Profilfoto",
+  };
+  return labels[key] || key.replace(/([A-Z])/g, " $1").replace(/^./, s => s.toUpperCase());
+}
+
+function formatValue(value) {
+  if (value === null || value === undefined || value === "") return "—";
+  if (typeof value === "boolean") return value ? "Ja" : "Nein";
+  if (Array.isArray(value)) return value.length ? value.join(", ") : "—";
+  if (typeof value === "object") {
+    if (value instanceof Date || (typeof value === "string" && value.includes("T"))) {
+      return new Date(value).toLocaleDateString("de-DE");
+    }
+    return JSON.stringify(value);
+  }
+  const str = value.toString();
+  if (str.includes("T") && str.includes("Z")) {
+    const d = new Date(str);
+    if (!isNaN(d)) return d.toLocaleDateString("de-DE");
+  }
+  return str;
+}
+
+const BASE_GROUPS = [
+  { label: "Persönliche Daten", keys: ["firstName", "lastName", "email", "phone", "birthDate", "gender", "nationality", "maritalStatus", "ahv"] },
+  { label: "Adresse", keys: ["street", "zip", "city", "country"] },
+  { label: "Qualifikation", keys: ["languages", "education", "experience", "skills"] },
+  { label: "Dokumente", keys: ["cvFile", "passportFile", "visaFile", "policeLetterFile", "certificateFile", "drivingLicenceFile", "profilePhoto"] },
+];
+
+export default function EmployeeInfo() {
+  const [employee, setEmployee] = useState(null);
+  const [formData, setFormData] = useState({});
+  const [editMode, setEditMode] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saveMsg, setSaveMsg] = useState({ type: "", text: "" });
+  const router = useRouter();
+
+  useEffect(() => {
+    const email = localStorage.getItem("email");
+    if (!email) { router.push("/login"); return; }
+
+    fetch("/api/get-employee", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    })
+      .then(r => r.json())
+      .then(data => { setEmployee(data); setFormData(data); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [router]);
+
+  const handleSave = async () => {
+    try {
+      const res = await fetch("/api/update-employee", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+      if (!res.ok) throw new Error();
+      const updated = await res.json();
+      setEmployee(updated);
+      setFormData(updated);
+      setEditMode(false);
+      setSaveMsg({ type: "success", text: "Daten erfolgreich gespeichert." });
+      setTimeout(() => setSaveMsg({ type: "", text: "" }), 4000);
+    } catch {
+      setSaveMsg({ type: "error", text: "Fehler beim Speichern." });
+    }
+  };
+
+  const handleFileUpload = async (file, fieldName) => {
+    if (!file) return;
+    const form = new FormData();
+    form.append("file", file);
+    form.append("field", fieldName);
+    form.append("email", employee.email);
+    try {
+      const res = await fetch("/api/upload-employee-file", { method: "POST", body: form });
+      if (!res.ok) throw new Error();
+      const { url } = await res.json();
+      setFormData(prev => ({ ...prev, [fieldName]: url }));
+    } catch {
+      alert("Fehler beim Upload.");
+    }
+  };
+
+  if (loading) return (
+    <EmployeeLayout>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-[#0F1F38] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm text-gray-500">Lade Informationen...</p>
+        </div>
+      </div>
+    </EmployeeLayout>
+  );
+
+  if (!employee) return (
+    <EmployeeLayout>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <p className="text-sm text-gray-500">Keine Daten gefunden.</p>
+      </div>
+    </EmployeeLayout>
+  );
+
+  const initials = `${employee.firstName?.[0] || ""}${employee.lastName?.[0] || ""}`.toUpperCase() || "M";
+
+  // Build grouped entries — no module-level mutation
+  const allKeys = Object.keys(formData).filter(k => !hiddenFields.includes(k));
+  const usedKeys = new Set(BASE_GROUPS.flatMap(g => g.keys));
+  const sonstigesKeys = allKeys.filter(k => !usedKeys.has(k) && !fileFields.includes(k));
+  const fieldGroups = [
+    ...BASE_GROUPS,
+    ...(sonstigesKeys.length > 0 ? [{ label: "Sonstiges", keys: sonstigesKeys }] : []),
+  ];
+
+  const inputCls = "w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0F1F38]/20 focus:border-[#0F1F38] transition";
+
+  return (
+    <EmployeeLayout>
+      <div className="px-6 lg:px-8 py-6 space-y-6 max-w-4xl">
+
+        {/* Header */}
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-full bg-[#0F1F38] flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+              {initials}
+            </div>
+            <div>
+              <h1 className="text-xl font-semibold text-gray-900">Persönliche Informationen</h1>
+              <p className="text-sm text-gray-500">{employee.firstName} {employee.lastName} · {employee.email}</p>
+            </div>
+          </div>
+          {!editMode ? (
+            <button
+              onClick={() => setEditMode(true)}
+              className="flex-shrink-0 px-4 py-2 bg-[#0F1F38] hover:bg-[#1a3050] text-white text-sm font-medium rounded-lg transition"
+            >
+              Bearbeiten
+            </button>
+          ) : (
+            <div className="flex gap-2 flex-shrink-0">
+              <button
+                onClick={handleSave}
+                className="px-4 py-2 bg-[#0F1F38] hover:bg-[#1a3050] text-white text-sm font-medium rounded-lg transition"
+              >
+                Speichern
+              </button>
+              <button
+                onClick={() => { setFormData(employee); setEditMode(false); setSaveMsg({ type: "", text: "" }); }}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition"
+              >
+                Abbrechen
+              </button>
+            </div>
+          )}
+        </div>
+
+        {saveMsg.text && (
+          <div className={`p-3 rounded-lg text-sm border ${
+            saveMsg.type === "success" ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "bg-red-50 border-red-200 text-red-700"
+          }`}>
+            {saveMsg.text}
+          </div>
+        )}
+
+        {/* Field groups */}
+        {fieldGroups.map(group => {
+          const entries = group.keys
+            .filter(k => k in formData)
+            .map(k => [k, formData[k]]);
+
+          if (entries.length === 0) return null;
+
+          const isDocGroup = group.label === "Dokumente";
+
+          return (
+            <div key={group.label} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-100">
+                <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{group.label}</h2>
+              </div>
+              <div className={`p-6 grid gap-4 ${isDocGroup ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 sm:grid-cols-2"}`}>
+                {entries.map(([key, value]) => (
+                  <div key={key}>
+                    <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">
+                      {formatLabel(key)}
+                    </label>
+
+                    {fileFields.includes(key) ? (
+                      editMode ? (
+                        <input
+                          type="file"
+                          onChange={e => handleFileUpload(e.target.files[0], key)}
+                          className="w-full text-sm text-gray-600 border border-gray-200 rounded-lg px-3 py-2 file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-[#0F1F38] file:text-white hover:file:bg-[#1a3050] transition"
+                        />
+                      ) : value ? (
+                        <a
+                          href={value}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 text-sm text-[#0F1F38] underline underline-offset-2 font-medium"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                          Datei öffnen
+                        </a>
+                      ) : (
+                        <span className="text-sm text-gray-400">Keine Datei</span>
+                      )
+                    ) : editMode ? (
+                      <input
+                        className={inputCls}
+                        value={Array.isArray(value) ? value.join(", ") : value ?? ""}
+                        onChange={e => setFormData(prev => ({
+                          ...prev,
+                          [key]: Array.isArray(prev[key])
+                            ? e.target.value.split(",").map(v => v.trim())
+                            : e.target.value,
+                        }))}
+                      />
+                    ) : (
+                      <div className="px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 min-h-[38px]">
+                        {formatValue(value)}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+
+      </div>
+    </EmployeeLayout>
+  );
+}

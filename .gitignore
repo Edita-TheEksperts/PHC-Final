@@ -1,0 +1,13 @@
+# Dependencies
+node_modules
+
+# Build output (Next.js)
+.next/
+
+# Keep environment variables out of version control
+.env
+
+# Local Claude Code settings
+.claude/
+
+ 

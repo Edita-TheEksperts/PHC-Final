@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "User" ADD COLUMN     "address" TEXT NOT NULL DEFAULT '',
+ADD COLUMN     "frequency" TEXT NOT NULL DEFAULT '',
+ADD COLUMN     "service" TEXT NOT NULL DEFAULT '',
+ADD COLUMN     "timeWindow" TEXT NOT NULL DEFAULT '';

@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    }
+  },
+  "include": ["src/**/*", "createTestUser.js", "syncStripe.js", "test-email.js", "testRefunds.js", "processRefunds.js", "addYesterdaySchedule.js"],
+  "exclude": ["node_modules", "**/node_modules/*"]
+}

@@ -1,0 +1,404 @@
+generator client {
+ provider = "prisma-client-js"
+
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Service {
+  id          String       @id @default(uuid())
+  name        String       @unique
+  subServices SubService[] @relation("ServiceToSubService")
+  users       User[]       @relation("UserServices")
+}
+
+model SubService {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  serviceId String?
+  service   Service? @relation("ServiceToSubService", fields: [serviceId], references: [id])
+  users     User[]   @relation("UserSubServices")
+}
+
+model Schedule {
+  id             Int           @id @default(autoincrement())
+  day            String
+  startTime      String
+  hours          Int
+  userId         String
+  kilometers     Int?
+  employeeId     String?
+  date           DateTime?
+  captured       Boolean       @default(false)
+  status         String        @default("active")
+  serviceName    String?
+  subServiceName String?
+  Assignment     Assignment[]
+  employee       Employee?     @relation(fields: [employeeId], references: [id])
+  user           User          @relation(fields: [userId], references: [id])
+  transactions   Transaction[]
+}
+
+model Vacation {
+  id         String         @id @default(uuid())
+  userId     String?
+  startDate  DateTime
+  endDate    DateTime
+  createdAt  DateTime       @default(now())
+  employeeId String?
+  status     VacationStatus @default(pending)
+  employee   Employee?      @relation(fields: [employeeId], references: [id])
+  user       User?          @relation(fields: [userId], references: [id])
+}
+
+model User {
+  id                      String        @id @default(uuid())
+  email                   String        @unique
+  passwordHash            String?
+  role                    Role          @default(client)
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
+  phone                   String?
+  address                 String
+  frequency               String
+  cardNumber              String?
+  cvc                     String?
+  duration                Int?
+  emergencyContactName    String?
+  emergencyContactPhone   String?
+  expiryDate              String?
+  firstDate               DateTime?
+  languages               String?
+  pets                    String?
+  appointments            String?
+  appointmentsOther       String?
+  briefkasten             String?
+  mobility                String?
+  postfach                String?
+  shoppingAssist          String?
+  shoppingType            String?
+  sonstige                String?
+  transport               String?
+  form4Completed          Boolean?      @default(false)
+  postalCode              String?
+  firstName               String?
+  lastName                String?
+  allergies               String?
+  specialRequests         String?
+  totalPayment            Float?
+  paymentIntentId         String?
+  aids                    String?
+  aidsOther               String?
+  allergyDetails          String?
+  basicCare               String?
+  basicCareOther          String?
+  communicationHören     String?
+  communicationSehen      String?
+  communicationSprechen   String?
+  companionship           String?
+  cooking                 String?
+  foodSupport             String?
+  form1Completed          Boolean?      @default(false)
+  form2Completed          Boolean?      @default(false)
+  form3Completed          Boolean?      @default(false)
+  hasAllergies            String?
+  hasTech                 String?
+  healthActivities        String?
+  healthActivitiesOther   String?
+  height                  String?
+  householdPeople         Int?
+  householdRooms          Int?
+  householdTasks          Json?
+  incontinence            String?
+  medicalFindings         String?
+  mentalConditions        String?
+  mentalSupport           String?
+  outings                 String?
+  playsCards              String?
+  reads                   String?
+  weight                  String?
+  additionalAccompaniment String?
+  allergyCheck            String?
+  allergyWhich            String?
+  appointmentOther        String?
+  appointmentTypes        String?
+  basicCareNeeds          String?
+  basicCareOtherField     String?
+  behaviorTraits          String?
+  biographyWork           String?
+  cardGames               String?
+  careArrivalConditions   String?
+  careCity                String?
+  careEntrance            String?
+  careEntranceDetails     String?
+  careFirstName           String?
+  careHasParking          String?
+  careLastName            String?
+  carePhone               String?
+  carePostalCode          String?
+  careStreet              String?
+  communicationHearing    String?
+  communicationSpeech     String?
+  communicationVision     String?
+  companionshipSupport    String?
+  foodSupportTypes        String?
+  healthFindings          String?
+  healthPromotionOther    String?
+  healthPromotions        String?
+  incontinenceTypes       String?
+  jointCooking            String?
+  mailboxDetails          String?
+  mailboxKeyLocation      String?
+  mentalDiagnoses         String?
+  mentalSupportNeeded     String?
+  mobilityAids            String?
+  physicalState           String?
+  reading                 String?
+  shoppingItems           String?
+  shoppingWithClient      String?
+  techAvailable           String?
+  toolsAvailable          String?
+  toolsOther              String?
+  transportOption         String?
+  trips                   String?
+  stripeCustomerId        String?
+  stripePaymentMethodId   String?
+  status                  String?       @default("open")
+  paymentCaptured         Boolean       @default(false)
+  manualPaid              Boolean       @default(false)
+  phc                     Boolean       @default(false)
+  attempts                Int           @default(0)
+  nextAttempt             DateTime?
+  reminderCount           Int           @default(0)
+  resetToken              String?
+  resetTokenExpiry        DateTime?
+  salesforceId            String?
+  requestFirstName        String?
+  requestLastName         String?
+  requestEmail            String?
+  requestPhone            String?
+  otherLanguage           String?
+  anrede                  String?
+  kanton                  String?
+  activityLogs            ActivityLog[] @relation("UserActivityLogs")
+  assignments             Assignment[]
+  reminders               Reminder[]
+  schedules               Schedule[]
+  transactions            Transaction[]
+  vacations               Vacation[]
+  services                Service[]     @relation("UserServices")
+  subServices             SubService[]  @relation("UserSubServices")
+  vouchers                Voucher[]     @relation("UserVouchers")
+  abschluss               ClientAbschluss[]
+}
+
+model Blog {
+  id              String   @id @default(uuid())
+  slug            String   @unique
+  title           String
+  metaTitle       String?
+  metaDescription String?
+  category        String
+  image           String?
+  date            String
+  maintext        String?
+  authorName      String?  @default("Martin Kälin")
+  authorPosition  String?  @default("Redakteur für Prime Home Care")
+  authorImage     String?  @default("/images/phc-author.png")
+  authorDescription String?
+  sections        Json?
+  published       Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model ClientAbschluss {
+  id              String   @id @default(uuid())
+  userId          String
+  endDate         DateTime
+  reason          String?
+  satisfaction    String?
+  recommendations String?
+  notes           String?
+  completedBy     String?
+  createdAt       DateTime @default(now())
+  user            User     @relation(fields: [userId], references: [id])
+}
+
+model Reminder {
+  id          String   @id @default(uuid())
+  userId      String
+  type        String
+  scheduledAt DateTime
+  sent        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id])
+}
+
+model Assignment {
+  id                 String    @id @default(uuid())
+  userId             String
+  employeeId         String
+  status             String    @default("active")
+  createdAt          DateTime  @default(now())
+  confirmationStatus String    @default("pending")
+  firstDate          DateTime?
+  serviceName        String?
+  scheduleId         Int?
+  reminderSentCount  Int       @default(0)
+  employee           Employee  @relation(fields: [employeeId], references: [id])
+  Schedule           Schedule? @relation(fields: [scheduleId], references: [id])
+  user               User      @relation(fields: [userId], references: [id])
+}
+
+model RejectionWarning {
+  id         String   @id @default(uuid())
+  employeeId String
+  sentAt     DateTime @default(now())
+  employee   Employee @relation(fields: [employeeId], references: [id])
+}
+
+model Feedback {
+  id         String   @id @default(uuid())
+  userId     String
+  employeeId String
+  comment    String
+  rating     Int
+  createdAt  DateTime @default(now())
+}
+
+model Employee {
+  id                   String             @id @default(uuid())
+  email                String             @unique
+  firstName            String
+  lastName             String
+  phone                String?
+  address              String?
+  residencePermit      String?
+  experienceYears      String
+  experienceWhere      String?
+  hasLicense           Boolean
+  availabilityFrom     DateTime
+  availabilityDays     String[]
+  servicesOffered      String[]
+  howFarCanYouTravel   String?
+  status               String             @default("pending")
+  createdAt            DateTime           @default(now())
+  bodyCareSupport      String?
+  documentStatus       String?            @default("not_sent")
+  carAvailableForWork  String?
+  city                 String?
+  communicationTraits  String[]
+  country              String?
+  dietaryExperience    String[]
+  experienceCompany    String?
+  hasAllergies         String?
+  hasCar               String?
+  houseNumber          String?
+  howDidYouHearAboutUs String?
+  languageOther        String?
+  languages            String[]
+  licenseType          String?
+  nightShiftFrequency  String?
+  nightShifts          String?
+  onCallAvailable      String?
+  salutation           String?
+  smoker               String?
+  specialTrainings     String[]
+  travelSupport        String?
+  weekendReady         String?
+  worksWithAnimals     String?
+  zipCode              String?
+  desiredWeeklyHours   String?
+  certificateFile      String?
+  cvFile               String?
+  drivingLicenceFile   String?
+  passportFile         String?
+  policeLetterFile     String?
+  profilePhoto         String?
+  visaFile             String?
+  password             String?
+  canton               String?
+  nationality          String?
+  accountHolder        String?
+  bankName             String?
+  bic                  String?
+  iban                 String?
+  invited              Boolean            @default(false)
+  inviteSentAt         DateTime?
+  salesforceId         String?
+  activityLogs         ActivityLog[]      @relation("EmployeeActivityLogs")
+  assignments          Assignment[]
+  rejectionWarnings    RejectionWarning[]
+  schedules            Schedule[]
+  transactions         Transaction[]
+  vacations            Vacation[]
+}
+
+model Transaction {
+  id              String   @id @default(uuid())
+  scheduleId      Int
+  userId          String
+  employeeId      String
+  amountClient    Float
+  amountEmployee  Float
+  status          String   @default("pending")
+  createdAt       DateTime @default(now())
+  paymentIntentId String   @unique
+  employee        Employee @relation(fields: [employeeId], references: [id])
+  schedule        Schedule @relation(fields: [scheduleId], references: [id])
+  user            User     @relation(fields: [userId], references: [id])
+}
+
+model EmailTemplate {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  subject   String
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ActivityLog {
+  id              String    @id @default(uuid())
+  actorUserId     String?
+  actorEmployeeId String?
+  action          String
+  targetId        String?
+  targetType      String?
+  metadata        Json?
+  createdAt       DateTime  @default(now())
+  actorEmployee   Employee? @relation("EmployeeActivityLogs", fields: [actorEmployeeId], references: [id], map: "ActivityLog_actorEmployeeId_fkey")
+  actorUser       User?     @relation("UserActivityLogs", fields: [actorUserId], references: [id], map: "ActivityLog_actorUserId_fkey")
+}
+
+model Voucher {
+  id            String   @id @default(uuid())
+  code          String   @unique
+  discountType  String
+  discountValue Float
+  maxUses       Int
+  usedCount     Int      @default(0)
+  validFrom     DateTime
+  validUntil    DateTime
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  usedBy        User[]   @relation("UserVouchers")
+}
+
+enum Role {
+  admin
+  client
+  employee
+}
+
+enum VacationStatus {
+  pending
+  approved
+  declined
+}

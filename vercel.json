@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/finances/retry-payments",
+      "schedule": "0 1 * * *"
+    }
+  ]
+}
