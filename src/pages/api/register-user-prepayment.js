@@ -77,50 +77,6 @@ export default async function handler(req, res) {
       }
     });
 
-    // Send password setup email
-    try {
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://phc.ch";
-      // Generate a simple token (for demo; in production, use a secure, DB-stored token)
-      const token = Math.random().toString(36).substring(2, 15);
-      const passwordLink = `${baseUrl}/forgot-password`;
-
-      const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: process.env.SMTP_PORT,
-        secure: process.env.SMTP_SECURE === "true",
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
-        },
-      });
-
-      const mailOptions = {
-        from: `"Prime Home Care" <${process.env.SMTP_USER}>`,
-        to: user.email,
-        subject: "Willkommen bei Prime Home Care AG – Passwort erstellen",
-        html: `
-<p>Hallo ${user.firstName || ""} ${user.lastName || ""}</p>
-<p>Vielen Dank für Ihre Registrierung bei Prime Home Care AG.</p>
-<p>Ihr Zugang zum Kundenportal wurde erfolgreich eingerichtet:</p>
-<ul>
-  <li>Buchungen verwalten</li>
-  <li>Rechnungen einsehen</li>
-  <li>Mit uns kommunizieren</li>
-</ul>
-<p><strong>Bitte erstellen Sie Ihr Passwort über die Schaltfläche unten:</strong></p>
-<a href="${passwordLink}"
-   style="display:inline-block; background-color:#B99B5F; color:#fff; padding:10px 18px; border-radius:5px; text-decoration:none; font-weight:bold;">
-  Passwort erstellen
-</a>
-<br><br>
-<p>Ihr Prime Home Care Team</p>
-        `,
-      };
-
-      await transporter.sendMail(mailOptions);
-    } catch (emailErr) {
-    }
-
     res.status(200).json({ userId: user.id });
   } catch (err) {
     res.status(500).json({ message: "Internal error", error: err.message });

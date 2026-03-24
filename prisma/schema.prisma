@@ -322,6 +322,8 @@ model Employee {
   profilePhoto         String?
   visaFile             String?
   password             String?
+  resetToken           String?
+  resetTokenExpiry     DateTime?
   canton               String?
   nationality          String?
   accountHolder        String?

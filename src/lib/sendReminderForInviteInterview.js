@@ -21,7 +21,7 @@ export async function sendReminderForInviteInterview() {
 
     const body = `
       <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-        <p>Grüezi ${emp.firstName}</p>
+        <p>Hallo ${emp.firstName}</p>
         <p>Wir freuen uns auf ein Gespräch mit Ihnen, jedoch haben wir noch keine Terminbuchung über unseren Kalender erhalten.</p>
         <p>
           Bitte wählen Sie jetzt Ihren Wunschtermin aus:

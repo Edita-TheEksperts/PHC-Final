@@ -31,7 +31,7 @@ export default async function handler(req, res) {
     Auflösungschreiben: (employee) => `
 <html>
   <body style="font-family: Arial, sans-serif; color: #222; font-size: 15px; line-height: 1.6;">
-    <p>Grüezi ${employee.firstName} ${employee.lastName}</p>
+    <p>Hallo ${employee.firstName} ${employee.lastName}</p>
     <p>
       Hiermit bestätigen wir die einvernehmliche Auflösung Ihres Arbeitsvertrags.<br>
       Wir danken Ihnen für die Zusammenarbeit und wünschen Ihnen für die Zukunft alles Gute.
@@ -54,7 +54,7 @@ export default async function handler(req, res) {
     KündigungMA: (employee) => `
 <html>
   <body style="font-family: Arial, sans-serif; color: #222; font-size: 15px; line-height: 1.6;">
-    <p>Grüezi ${employee.firstName} ${employee.lastName}</p>
+    <p>Hallo ${employee.firstName} ${employee.lastName}</p>
     <p>
       Hiermit kündigen wir Ihr Arbeitsverhältnis fristgerecht zum nächstmöglichen Zeitpunkt.<br>
       Vielen Dank für Ihre Mitarbeit und alles Gute für Ihre Zukunft.
@@ -78,7 +78,7 @@ export default async function handler(req, res) {
     KündigungMAFristlos: (employee) => `
 <html>
   <body style="font-family: Arial, sans-serif; color: #222; font-size: 15px; line-height: 1.6;">
-    <p>Grüezi ${employee.firstName} ${employee.lastName}</p>
+    <p>Hallo ${employee.firstName} ${employee.lastName}</p>
     <p>
       Hiermit teilen wir Ihnen mit, dass das bestehende Arbeitsverhältnis mit Ihnen per sofort fristlos beendet wird.<br>
       Das entsprechende Kündigungsschreiben ist diesem E-Mail als Dokument beigefügt und wurde rechtsgültig erstellt.

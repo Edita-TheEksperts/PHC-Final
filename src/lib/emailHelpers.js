@@ -54,7 +54,7 @@ export async function sendAssignmentContractEmail(assignment) {
           <img src='https://www.phc.ch/phc-logo.png' alt='Prime Home Care Logo' style='max-width:180px; margin-bottom:16px;' />
         </div>
         <div style="padding:24px;">
-          <p>Grüezi ${employee.firstName}</p>
+          <p>Hallo ${employee.firstName}</p>
           <p>Wir freuen uns Ihnen mitzuteilen, dass Ihr Einsatz offiziell bestätigt wurde.</p>
           <p>Den dazugehörigen Arbeitsvertrag finden Sie im Anhang dieser E-Mail.</p>
           <p>Bitte lesen Sie den Arbeitsvertrag sorgfältig durch und unterzeichnen Sie das Dokument digital.</p>
@@ -209,7 +209,7 @@ await transporter.sendMail({
   from: `"Prime Home Care AG" <${process.env.SMTP_USER}>`,
   to: email,
   subject: `Ihre Einsatzbestätigung – Arbeitsvertrag im Anhang`,
-  text: `Grüezi ${firstName}
+  text: `Hallo ${firstName}
 
 Wir freuen uns Ihnen mitzuteilen, dass Ihr Einsatz offiziell bestätigt wurde.  
 
@@ -234,7 +234,7 @@ www.phc.ch
 AVB und Nutzungsbedingungen`,
   html: `
     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-      <p>Grüezi ${firstName}</p>
+      <p>Hallo ${firstName}</p>
 
       <p>Wir freuen uns Ihnen mitzuteilen, dass Ihr Einsatz offiziell bestätigt wurde.</p>
 

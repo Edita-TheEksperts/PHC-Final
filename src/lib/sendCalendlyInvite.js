@@ -1,6 +1,6 @@
 import nodemailer from "nodemailer";
 
-export async function sendCalendlyInvite(email) {
+export async function sendCalendlyInvite(email, firstName = "") {
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: +process.env.SMTP_PORT,
@@ -18,7 +18,7 @@ export async function sendCalendlyInvite(email) {
     subject: "Vereinbaren Sie Ihr Interview",
     html: `
       <div style="font-family: Arial, sans-serif; line-height: 1.7; color: #333;">
-        <p>Grüezi ${firstName}</p>
+        <p>Hallo ${firstName}</p>
         <br>
         <p>Vielen Dank für Ihre Bewerbung – wir freuen uns, Sie näher kennenzulernen!</p>
         <br>

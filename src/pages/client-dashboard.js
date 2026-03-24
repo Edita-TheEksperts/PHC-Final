@@ -6,6 +6,7 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 import Kundigung from "./dashboard/kundigung";
 import RegisterForm3 from "../components/RegisterForm3";
 import RegisterForm4 from "../components/RegisterForm4";
+import ClientDashboard2 from "../components/ClientDashboard2";
 import "react-datepicker/dist/react-datepicker.css";
 import DatePicker, { registerLocale } from "react-datepicker";
 import { parseISO } from "date-fns";
@@ -1070,167 +1071,26 @@ await fetchAppointments(userId);
                     <Clock className="w-4 h-4 text-[#B99B5F]" />
                   </div>
                   <h3 className="text-sm font-bold text-gray-900">Neue Buchung</h3>
-                  <div className="ml-auto flex items-center gap-1.5">
-                    {["booking", "payment", "done"].map((s, i) => (
-                      <div key={s} className={`h-1.5 rounded-full transition-all ${step === s ? "w-6 bg-[#B99B5F]" : ["booking","payment","done"].indexOf(step) > i ? "w-3 bg-[#B99B5F]/50" : "w-3 bg-gray-200"}`} />
-                    ))}
-                  </div>
                 </div>
-                <div className="p-6">
-                  {step === "booking" && (
-                    <form onSubmit={handleBookingSubmit} className="space-y-5">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1.5">Datum</label>
-                        <DatePicker
-                          selected={form.date}
-                          onChange={(date) => setForm({ ...form, date })}
-                          dateFormat="dd.MM.yyyy"
-                          locale="de"
-                          placeholderText="TT.MM.JJJJ"
-                          className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#B99B5F]/30 focus:border-[#B99B5F]"
-                          minDate={minSelectableDate}
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1.5">Uhrzeit</label>
-                        <div className="grid grid-cols-5 gap-1.5 max-h-36 overflow-y-auto pr-1">
-                          {Array.from({ length: (20 - 7) * 2 + 2 }, (_, i) => {
-                            const hour = 7 + Math.floor(i / 2);
-                            const minutes = i % 2 === 0 ? "00" : "30";
-                            const time = `${String(hour).padStart(2, "0")}:${minutes}`;
-                            return (
-                              <button
-                                key={time}
-                                type="button"
-                                onClick={() => setForm({ ...form, time })}
-                                className={`py-1.5 rounded-lg text-xs font-medium border transition
-                                  ${form.time === time
-                                    ? "bg-[#B99B5F] text-white border-[#B99B5F]"
-                                    : "bg-gray-50 text-gray-700 border-gray-200 hover:border-[#B99B5F]/40"}`}
-                              >
-                                {time}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1.5">Dauer</label>
-                        <div className="flex items-center gap-3">
-                          <button
-                            type="button"
-                            onClick={() => setForm((prev) => ({ ...prev, hours: Math.max(2, (prev.hours || 2) - 0.5) }))}
-                            className="w-8 h-8 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 flex items-center justify-center text-lg font-bold"
-                          >–</button>
-                          <span className="text-base font-semibold text-gray-900 w-16 text-center">{form.hours || 2} Std</span>
-                          <button
-                            type="button"
-                            onClick={() => setForm((prev) => ({ ...prev, hours: Math.min(8, (prev.hours || 2) + 0.5) }))}
-                            className="w-8 h-8 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 flex items-center justify-center text-lg font-bold"
-                          >+</button>
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1.5">Service</label>
-                        <select
-                          value={form.service}
-                          onChange={(e) => setForm({ ...form, service: e.target.value, subService: "" })}
-                          className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#B99B5F]/30 focus:border-[#B99B5F]"
-                        >
-                          <option value="">Service auswählen</option>
-                          {allServices.map((srv) => (
-                            <option key={srv.id} value={String(srv.id)}>{srv.name}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      {selectedService?.subServices?.length > 0 && (
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1.5">Unterkategorie</label>
-                          <select
-                            value={form.subService}
-                            onChange={(e) => setForm({ ...form, subService: e.target.value })}
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#B99B5F]/30 focus:border-[#B99B5F]"
-                          >
-                            <option value="">Unterkategorie auswählen</option>
-                            {selectedService.subServices.map((sub) => (
-                              <option key={sub.id} value={String(sub.id)}>{sub.name}</option>
-                            ))}
-                          </select>
-                        </div>
-                      )}
-
-                      <button
-                        type="submit"
-                        className="w-full bg-[#B99B5F] text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-[#a78a50] transition"
-                      >
-                        Termin buchen
-                      </button>
-                    </form>
-                  )}
-
-                  {step === "payment" && !editingCard && (
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2 mb-1">
-                        <button onClick={() => setStep("booking")} className="text-xs text-gray-400 hover:text-gray-600 transition flex items-center gap-1">
-                          ← Zurück
-                        </button>
-                        <h4 className="text-sm font-bold text-gray-900 ml-auto">Zahlungsdetails</h4>
-                      </div>
-                      {pendingBooking && (
-                        <div className="bg-[#B99B5F]/5 border border-[#B99B5F]/20 rounded-xl p-3 text-xs text-gray-600 space-y-1">
-                          <p className="font-semibold text-gray-800">Buchungsübersicht</p>
-                          {pendingBooking.date && <p>📅 {new Date(pendingBooking.date).toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long" })}</p>}
-                          {pendingBooking.time && <p>🕐 {pendingBooking.time} Uhr · {pendingBooking.hours} Stunden</p>}
-                          {pendingBooking.service && <p>🔧 {pendingBooking.service}{pendingBooking.subService ? ` · ${pendingBooking.subService}` : ""}</p>}
-                          <p className="font-bold text-[#B99B5F] pt-1">CHF {(pendingBooking.hours * 50).toFixed(2)}</p>
-                        </div>
-                      )}
-                      <div className="border border-gray-200 rounded-xl p-3 bg-gray-50">
-                        <CardElement />
-                      </div>
-                      <label className="flex items-start gap-2 text-sm text-gray-700 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={agbAccepted}
-                          onChange={(e) => setAgbAccepted(e.target.checked)}
-                          className="mt-0.5 accent-[#B99B5F]"
-                        />
-                        <span>
-                          Ich akzeptiere die{" "}
-                          <a href="/AVB" target="_blank" className="text-[#B99B5F] underline font-medium">AVB</a>
-                        </span>
-                      </label>
-                      {agbError && <p className="text-red-500 text-xs">{agbError}</p>}
-                      <button
-                        onClick={handleStripePayment}
-                        className="w-full bg-gradient-to-r from-[#04436F] to-[#065a96] text-white py-3 rounded-xl text-sm font-bold hover:opacity-90 transition shadow-sm"
-                      >
-                        Zahlung bestätigen · CHF {pendingBooking ? (pendingBooking.hours * 50).toFixed(2) : "–"}
-                      </button>
-                    </div>
-                  )}
-
-                  {step === "done" && (
-                    <div className="py-8 text-center space-y-3">
-                      <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-                        <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                      <p className="text-base font-semibold text-gray-900">Termin erfolgreich gebucht!</p>
-                      <p className="text-sm text-gray-500">Ihre Zahlung wurde bestätigt.</p>
-                      <button
-                        onClick={() => setStep("booking")}
-                        className="mt-2 text-sm text-[#B99B5F] font-medium hover:underline"
-                      >
-                        Neuen Termin buchen
-                      </button>
-                    </div>
-                  )}
+                <div className="p-6 flex flex-col items-center text-center gap-5">
+                  <div className="w-16 h-16 rounded-full bg-[#B99B5F]/10 flex items-center justify-center mt-2">
+                    <CalendarDays className="w-8 h-8 text-[#B99B5F]" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">Neuen Termin buchen</p>
+                    <p className="text-xs text-gray-400 mt-1.5 max-w-xs leading-relaxed">
+                      Starten Sie eine neue Buchung über unser Anmeldeformular und wählen Sie Ihre gewünschten Leistungen, Termine und Zahlungsart.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (userData?.id) sessionStorage.setItem("userId", userData.id);
+                      router.push("/register-client");
+                    }}
+                    className="w-full bg-[#B99B5F] text-white py-3 rounded-xl text-sm font-semibold hover:bg-[#a78a50] transition"
+                  >
+                    Jetzt buchen
+                  </button>
                 </div>
               </div>
             </div>
@@ -1371,6 +1231,11 @@ await fetchAppointments(userId);
                   )}
                 </div>
               </div>
+            </div>
+
+            {/* ── RECHNUNGEN ROW ── */}
+            <div>
+              <ClientDashboard2 userId={userData?.id} />
             </div>
 
             {/* ── CONTRACT + EMPLOYEE ROW ── */}
@@ -1575,7 +1440,7 @@ await fetchAppointments(userId);
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div className="bg-gray-50 rounded-xl p-3">
                       <p className="text-xs text-gray-400 mb-1 font-medium">Datum</p>
-                      <p className="font-bold text-gray-900">{new Date(selectedAppointment.date).toLocaleDateString("de-DE", { day: "2-digit", month: "long", year: "numeric" })}</p>
+                      <p className="font-bold text-gray-900">{selectedAppointment.date ? new Date(selectedAppointment.date).toLocaleDateString("de-DE", { day: "2-digit", month: "long", year: "numeric" }) : "—"}</p>
                     </div>
                     <div className="bg-gray-50 rounded-xl p-3">
                       <p className="text-xs text-gray-400 mb-1 font-medium">Uhrzeit</p>
@@ -1590,11 +1455,20 @@ await fetchAppointments(userId);
                       <p className="font-bold text-[#B99B5F]">CHF {((selectedAppointment.hours || 0) * 50).toFixed(2)}</p>
                     </div>
                   </div>
-                  {selectedAppointment.serviceName && (
+                  {(selectedAppointment.serviceName || clientDetails?.services?.length > 0) && (
                     <div className="bg-gray-50 rounded-xl p-3 text-sm">
-                      <p className="text-xs text-gray-400 mb-1 font-medium">Service</p>
-                      <p className="font-bold text-gray-900">{selectedAppointment.serviceName}</p>
-                      {selectedAppointment.subServiceName && <p className="text-gray-500 text-xs mt-0.5">{selectedAppointment.subServiceName}</p>}
+                      <p className="text-xs text-gray-400 mb-1 font-medium">Gebuchte Dienstleistungen</p>
+                      <p className="font-bold text-gray-900">
+                        {selectedAppointment.serviceName || clientDetails?.services?.map(s => s.name).join(", ") || "—"}
+                      </p>
+                    </div>
+                  )}
+                  {(selectedAppointment.subServiceName || clientDetails?.subServices?.length > 0) && (
+                    <div className="bg-gray-50 rounded-xl p-3 text-sm">
+                      <p className="text-xs text-gray-400 mb-1 font-medium">Dienstleistung Unterkategorie</p>
+                      <p className="font-bold text-gray-900">
+                        {selectedAppointment.subServiceName || clientDetails?.subServices?.map(s => s.name).join(", ") || "—"}
+                      </p>
                     </div>
                   )}
                   {selectedAppointment.status === "active" && (

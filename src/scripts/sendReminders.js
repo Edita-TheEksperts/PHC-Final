@@ -18,7 +18,7 @@ await transporter.sendMail({
   to: user.email,
   subject: "Final Reminder: Bitte Job akzeptieren",
   html: `
-    <p>Grüezi ${employee.firstName}</p>
+    <p>Hallo ${employee.firstName}</p>
 
     <p>Du hast den Job noch nicht bestätigt. Nach 36 Stunden wird der Job automatisch storniert.</p>
 

@@ -18,7 +18,7 @@ export async function sendTerminationEmail({ email, firstName, lastName, immedia
     subject = "Bestätigung Ihrer fristlosen Kündigung bei Prime Home Care AG";
     html = `
       <div style="font-family: Arial, sans-serif; line-height: 1.7; color: #222;">
-        <p>Grüezi ${firstName || ""} ${lastName || ""}</p>
+        <p>Hallo ${firstName || ""} ${lastName || ""}</p>
         <br>
         <p>Wir bestätigen hiermit die fristlose Kündigung unserer Dienstleistung.</p>
         <br>
@@ -46,7 +46,7 @@ export async function sendTerminationEmail({ email, firstName, lastName, immedia
     subject = "Bestätigung Ihrer Kündigung bei Prime Home Care AG";
     html = `
       <div style="font-family: Arial, sans-serif; line-height: 1.7; color: #222;">
-        <p>Grüezi ${firstName || ""} ${lastName || ""}</p>
+        <p>Hallo ${firstName || ""} ${lastName || ""}</p>
         <br>
         <p>Wir bestätigen hiermit die Kündigung unserer Dienstleistung.</p>
         <br>

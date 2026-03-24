@@ -34,7 +34,7 @@ export async function runUnassignedClientEmails() {
       if (diffSeconds >= SECONDS) {
 
         const html = `
-          <p>Grüezi ${client.firstName || ""} ${client.lastName || ""}</p>
+          <p>Hallo ${client.firstName || ""} ${client.lastName || ""}</p>
 
           <p>Vielen Dank für Ihre Online-Buchung bei Prime Home Care.</p>
 

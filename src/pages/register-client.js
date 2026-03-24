@@ -35,22 +35,6 @@ export default function RegisterPage() {
   const hd = new Holidays("CH"); 
   const hdZH = new Holidays("CH", "ZH");
 
-  function isSwissHoliday(date) {
-    return Boolean(hd.isHoliday(date));
-  }
-  function getSurcharge(date) {
-    let surcharge = 0;
-
-    const hour = date.getHours();
-
-    if (hour >= 23 || hour <= 5) surcharge += 0.25;
-
-    if (date.getDay() === 0) surcharge += 0.5;
-
-    if (hd.isHoliday(date)) surcharge += 0.5;
-
-    return surcharge;
-  }
   const [loading, setLoading] = useState(false);
   const [voucherStatus, setVoucherStatus] = useState(null);
 const [discountAmount, setDiscountAmount] = useState(0);
@@ -251,22 +235,49 @@ useEffect(() => {
   }
   function parseScheduleDate(entry) {
     if (!entry.day || !entry.startTime) return new Date();
-
     const [hours, minutes] = entry.startTime.split(":").map(Number);
     const date = new Date(entry.day);
     date.setHours(hours);
     date.setMinutes(minutes);
-
     return date;
   }
-  function getSurcharge(date) {
-    let surcharge = 0;
+  function roundToSwissFrancs(amount) {
+    return Math.ceil(amount * 20) / 20;
+  }
+  // Per-hour cost: night surcharge (+25%) only on hours 23:00–06:00,
+  // Sunday/holiday surcharge (+50%) on any hour falling on Sunday or public holiday.
+  // Both surcharges stack for Sunday-night hours.
+  // Handles fractional hours (e.g. 0.5h increments from subservices).
+  function calculateHourlyCost(startDate, totalHours, baseRate) {
+    let cost = 0;
+    const fullHours = Math.floor(totalHours);
+    const remainder = parseFloat((totalHours - fullHours).toFixed(1));
 
-    if (date.getHours() >= 23 || date.getHours() <= 5) surcharge += 0.25; 
-    if (date.getDay() === 0) surcharge += 0.5; 
-    if (isSwissHoliday(date)) surcharge += 0.5; 
+    for (let i = 0; i < fullHours; i++) {
+      const hourDate = new Date(startDate);
+      hourDate.setHours(startDate.getHours() + i);
+      const h = hourDate.getHours();
+      const isNight = h >= 23 || h < 6;
+      const isSundayOrHoliday = hourDate.getDay() === 0 || isSwissHoliday(hourDate);
+      let rate = baseRate;
+      if (isSundayOrHoliday) rate += baseRate * 0.5;
+      if (isNight) rate += baseRate * 0.25;
+      cost += rate;
+    }
 
-    return surcharge;
+    if (remainder > 0) {
+      const hourDate = new Date(startDate);
+      hourDate.setHours(startDate.getHours() + fullHours);
+      const h = hourDate.getHours();
+      const isNight = h >= 23 || h < 6;
+      const isSundayOrHoliday = hourDate.getDay() === 0 || isSwissHoliday(hourDate);
+      let rate = baseRate;
+      if (isSundayOrHoliday) rate += baseRate * 0.5;
+      if (isNight) rate += baseRate * 0.25;
+      cost += rate * remainder;
+    }
+
+    return cost;
   }
 const [voucherCode, setVoucherCode] = useState("");
 
@@ -296,21 +307,19 @@ const [voucherCode, setVoucherCode] = useState("");
   }
   let totalPayment = 0;
   if (frequency === "einmalig") {
-    totalPayment = form.schedules?.reduce((sum, entry) => {
+    const raw = form.schedules?.reduce((sum, entry) => {
       const date = buildDate(entry, form.firstDate);
       const hours = parseFloat(entry.hours) || 0;
-      const surcharge = getSurcharge(date);
-      const hourlyRate = 75 * (1 + surcharge); 
-      return sum + hours * hourlyRate;
-    }, 0);
+      return sum + calculateHourlyCost(date, hours, 75);
+    }, 0) || 0;
+    totalPayment = roundToSwissFrancs(raw);
   } else if (isRecurring) {
-    totalPayment = form.schedules?.reduce((sum, entry) => {
+    const raw = form.schedules?.reduce((sum, entry) => {
       const date = buildDate(entry, form.firstDate);
       const hours = parseFloat(entry.hours) || 0;
-      const surcharge = getSurcharge(date);
-      const hourlyRate = 59 * (1 + surcharge); 
-      return sum + hours * hourlyRate;
-    }, 0);
+      return sum + calculateHourlyCost(date, hours, 59);
+    }, 0) || 0;
+    totalPayment = roundToSwissFrancs(raw);
   }
 
 useEffect(() => {
@@ -643,7 +652,7 @@ const validateStep = () => {
         ...prev,
         services: "Bitte wählen Sie mindestens eine Dienstleistung.",
       }));
-      refs.servicesRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      refs.services.current?.scrollIntoView({ behavior: "smooth", block: "center" });
       return false;
     }
 
@@ -881,7 +890,7 @@ const handleNext = async () => {
     else if (frequency === "alle 2 Wochen") step = 14;
     else step = 7;
 
-    for (const { day, startTime, hours } of schedules) {
+    for (const { day, startTime, hours, serviceName, subServiceName } of schedules) {
       if (!day) continue;
 
       let date = new Date(firstDate);
@@ -895,6 +904,8 @@ const handleNext = async () => {
           day,
           startTime,
           hours,
+          serviceName: serviceName || null,
+          subServiceName: subServiceName || null,
         });
       }
     }
@@ -1067,10 +1078,17 @@ const handleNext = async () => {
         )
       );
 
+      const serviceNameStr = (form.services || []).join(", ") || null;
+      const subServiceNameStr = collectedSubservices.join(", ") || null;
+
       const payload = {
         ...form,
         subServices: collectedSubservices,
-        schedules: generatedSchedules,
+        schedules: generatedSchedules.map(s => ({
+          ...s,
+          serviceName: s.serviceName !== undefined ? s.serviceName : serviceNameStr,
+          subServiceName: s.subServiceName !== undefined ? s.subServiceName : subServiceNameStr,
+        })),
       };
 
 const res = await fetch("/api/client-register-api", {
@@ -1742,6 +1760,14 @@ const handlePayment = async () => {
           {step === 1 && (
             <>
               <h2 className="text-2xl font-bold text-black">Wie oft & wann?</h2>
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-gray-700">
+                <p className="font-semibold text-amber-800 mb-1">Kostenzuschläge</p>
+                <ul className="space-y-1">
+                  <li>• Sonntagszuschlag: <strong>+50%</strong> (Sonntage &amp; gesetzliche Feiertage)</li>
+                  <li>• Nachtzuschlag: <strong>+25%</strong> (23:00–06:00 Uhr)</li>
+                </ul>
+                <p className="mt-1 text-xs text-gray-500">Feiertage: Neujahrstag, Karfreitag, Ostermontag, Auffahrt, Pfingstmontag, Bundesfeiertag, Weihnachtstag, Stephanstag</p>
+              </div>
               <div className="space-y-4">
               <div ref={frequencyRef} className="space-y-2">
                   <p className="font-medium">
@@ -1956,11 +1982,11 @@ onChange={(date) => {
     return;
   }
   const formatted = format(date, "dd.MM.yyyy", { locale: de });
-  const weekday = format(date, "EEEE", { locale: de }); 
+  const weekday = format(date, "EEEE", { locale: de });
 
   const updatedSchedules = [...form.schedules];
   if (updatedSchedules.length > 0) {
-    updatedSchedules[0].day = weekday; 
+    updatedSchedules[0].day = weekday;
   }
 
   setForm({
@@ -1968,6 +1994,7 @@ onChange={(date) => {
     firstDate: formatted,
     schedules: updatedSchedules,
   });
+  setErrors((prev) => ({ ...prev, firstDate: "" }));
 }}
 
   dateFormat="dd.MM.yyyy"
@@ -2144,28 +2171,25 @@ onChange={(date) => {
               onClick={() => {
                 const updated = [...form.schedules];
                 const current = updated[i].hours ?? 2;
-                if (current >= 8) {
-                  updated.push({
-                    day: "",
-                    startTime: "08:00",
-                    hours: 2,
-                    subServices: [],
-                  });
-                } else {
-                  updated[i].hours = Math.min(current + 0.5, 8);
+                if (current < 24) {
+                  updated[i].hours = parseFloat((current + 0.5).toFixed(1));
+                  setForm({ ...form, schedules: updated });
                 }
-                setForm({ ...form, schedules: updated });
               }}
-              className="w-8 h-8 border rounded-full text-xl flex items-center justify-center"
+              disabled={form.schedules[i].hours >= 24}
+              className={`w-8 h-8 border rounded-full text-xl flex items-center justify-center ${form.schedules[i].hours >= 24 ? "opacity-50 cursor-not-allowed" : ""}`}
             >
               +
             </button>
           </div>
         </div>
         <div className="mt-6 mb-10">
-          <label className="block mb-3 font-medium text-gray-800 text-center lg:text-left">
+          <label ref={i === 0 ? refs.services : null} className="block mb-3 font-medium text-gray-800 text-center lg:text-left">
             Welche Leistungen möchten Sie beanspruchen? ({entry.day || "Tag " + (i + 1)})
           </label>
+          {i === 0 && errors.services && (
+            <p className="text-red-600 text-sm mb-2">{errors.services}</p>
+          )}
           <div className="flex flex-col lg:flex-row gap-6">
             <div className="lg:w-1/4 flex-shrink-0 bg-white border border-gray-200 rounded-xl shadow-sm 
                             lg:sticky lg:top-36 self-start max-h-[70vh] flex flex-col">
@@ -2183,8 +2207,18 @@ onChange={(date) => {
                         if (isSelected) {
                           // Only allow removal if more than one service remains
                           if ((form.services || []).length > 1) {
-                            const updated = form.services.filter((s) => s !== srv.name);
-                            setForm((prev) => ({ ...prev, services: updated }));
+                            const updatedServices = form.services.filter((s) => s !== srv.name);
+                            // Also remove all subservices belonging to this main service
+                            const subsToRemove = subServices
+                              .filter((sub) => sub.parentService === srv.name)
+                              .map((sub) => sub.name);
+                            const updatedSchedules = form.schedules.map((sched) => ({
+                              ...sched,
+                              subServices: (sched.subServices || []).filter(
+                                (s) => !subsToRemove.includes(s)
+                              ),
+                            }));
+                            setForm((prev) => ({ ...prev, services: updatedServices, schedules: updatedSchedules }));
                           }
                         } else {
                           const updated = [...form.services, srv.name];
@@ -2221,15 +2255,11 @@ onChange={(date) => {
 
     updated[i].subServices = nextSubServices;
 
-    let minHours = 2;
-    if (nextSubServices.length > 2) {
-      minHours = 2 + (nextSubServices.length - 2);
-    }
+    // 2h minimum; each subservice beyond the first 2 adds 0.5h
+    const minHours = 2 + Math.max(0, nextSubServices.length - 2) * 0.5;
 
-    // If hours are below new min, increase. If above new min, decrease to min if previously forced higher.
+    // Only raise hours to meet the new minimum; never decrease what the user set
     if ((updated[i].hours ?? 2) < minHours) {
-      updated[i].hours = minHours;
-    } else if ((updated[i].hours ?? 2) > minHours) {
       updated[i].hours = minHours;
     }
 
@@ -2281,7 +2311,7 @@ onChange={(date) => {
 {step === 2 && (
   <>
     <h2 className="text-2xl font-bold text-black">
-      Persönliche Angaben (zu betreuende Person)
+      Angaben der zu betreuenden Person
     </h2>
 
     <div className="text-sm text-left mt-6">
@@ -2629,7 +2659,7 @@ onChange={(date) => {
               <div className="space-y-8 mt-6">
                 <div className="border border-gray-300 rounded-lg p-6 bg-white shadow-sm">
                   <h3 className="font-bold text-[20px] mb-6">
-                    Persönliche Angaben (Zusammenfassung)
+                    Angaben der zu betreuenden Person (Zusammenfassung)
                   </h3>
                   <div>
                     <h4 className="font-[600] text-[16px] ">Einsatzort</h4>
@@ -2770,20 +2800,19 @@ onChange={(date) => {
   </div>
 </div>
 
-<div className="mt-4 mb-6">
-  <label className="inline-flex items-center gap-2 text-sm text-gray-800">
-    <input
-      type="checkbox"
-      checked={sameAsEinsatzort}
-      onChange={() => setSameAsEinsatzort(!sameAsEinsatzort)}
-      className="w-5 h-5 accent-[#B99B5F]"
-    />
-    <span>Anfragende Person ist dieselbe wie die zu betreuende Person</span>
-  </label>
-</div>
-
 <div className="mb-8">
-  <h4 className="font-[600] text-[16px] mb-4">Anfragende Person</h4>
+  <h4 className="font-[600] text-[16px] mb-2">Anfragende Person</h4>
+  <div className="mb-4">
+    <label className="inline-flex items-center gap-2 text-sm text-gray-800">
+      <input
+        type="checkbox"
+        checked={sameAsEinsatzort}
+        onChange={() => setSameAsEinsatzort(!sameAsEinsatzort)}
+        className="w-5 h-5 accent-[#B99B5F]"
+      />
+      <span>Angaben übernehmen</span>
+    </label>
+  </div>
   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
     <div className="mb-2">
       <label className="block font-medium mb-1">
@@ -3938,15 +3967,14 @@ onChange={(date) => {
 
   {form.schedules.map((s, i) => {
     const hours = parseFloat(s.hours) || 0;
-    // Use the same buildDate and getSurcharge logic as in totalPayment
     const date = buildDate(s, form.firstDate);
-    const surcharge = getSurcharge(date);
     const baseRate = form.frequency === "einmalig" ? 75 : 59;
-    const hourlyRate = baseRate * (1 + surcharge);
+    const entryCost = calculateHourlyCost(date, hours, baseRate);
+    const hasSurcharge = entryCost > baseRate * hours;
     return (
       <p key={i} className="text-sm text-gray-600">
-        {hours} Std × {hourlyRate.toFixed(2)} CHF = {(hours * hourlyRate).toFixed(2)} CHF
-        {surcharge > 0 && (
+        {hours} Std = {entryCost.toFixed(2)} CHF
+        {hasSurcharge && (
           <span className="text-xs text-gray-400 ml-2">(inkl. Zuschlag)</span>
         )}
       </p>

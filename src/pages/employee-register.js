@@ -84,7 +84,7 @@ const scrollToTop = () => {
     worksWithAnimals: "",
     desiredWeeklyHours: "",
     howFarCanYouTravel: "",
-    availabilityFrom: "",
+    availabilityFrom: typeof window !== "undefined" ? new Date().toISOString().split("T")[0] : "",
     availabilityDays: [],
     servicesOffered: [],
     howDidYouHearAboutUs: "",
@@ -247,7 +247,7 @@ if (step === 1) {
   if (!form.zipCode) newErrors.zipCode = "PLZ ist erforderlich.";
   if (!form.city) newErrors.city = "Ort ist erforderlich.";
   if (!form.country) newErrors.country = "Land ist erforderlich.";
-  // Kanton ist kein Mussfeld
+  if (!form.canton) newErrors.canton = "Bitte Kanton auswählen.";
 }
 if (step === 2) {
   if (!form.residencePermit) {
@@ -363,11 +363,7 @@ const specialTrainingsRef = useRef(null);
 
 const handleSubmit = async (e) => {
   e.preventDefault();
- setStepError("");
-setIsSubmitted(true);
-setSubmissionMessage("Dateien werden hochgeladen...");
-
-
+  setStepError("");
   setIsSubmitted(true);
   setSubmissionMessage("Dateien werden hochgeladen...");
 
@@ -405,11 +401,6 @@ const payload = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-await fetch("/api/send-interview-email", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ email: form.email, firstName: form.firstName }),
-});
 
     if (res.status === 409) {
       const errorData = await res.json();
@@ -419,6 +410,12 @@ await fetch("/api/send-interview-email", {
     }
 
     if (!res.ok) throw new Error("API error");
+
+    await fetch("/api/send-interview-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: form.email, firstName: form.firstName }),
+    });
 
  setSubmissionMessage(
   `Vielen Dank für Ihre Bewerbung bei der Prime Home Care AG. Wir haben Ihre Unterlagen erfolgreich erhalten und werden diese sorgfältig prüfen. Wir melden uns so bald wie möglich mit weiteren Informationen bei Ihnen.`
@@ -674,7 +671,9 @@ useEffect(() => {
         </option>
       ))}
     </select>
-    {/* Kanton ist kein Mussfeld, daher keine Fehleranzeige */}
+    {errors.canton && (
+      <p className="text-red-600 text-sm mt-1">{errors.canton}</p>
+    )}
   </div>
 
 
@@ -707,6 +706,9 @@ useEffect(() => {
       <option value="DE">Deutschland (DE)</option>
       <option value="AT">Österreich (AT)</option>
     </select>
+    {errors.country && (
+      <p className="text-red-600 text-sm mt-1">{errors.country}</p>
+    )}
   </div>
 </div>
 
@@ -993,25 +995,21 @@ Info: z.B. Wochenende Milano oder 10 Tage Kreuzfahrt
   </label>
 
   <DatePicker
-    selected={
-      form.availabilityFrom
-        ? new Date(form.availabilityFrom)
-        : new Date() // ✅ Default = sot
-    }
+    selected={form.availabilityFrom ? new Date(form.availabilityFrom) : null}
     onChange={(date) =>
       setForm((prev) => ({
         ...prev,
         availabilityFrom: date ? date.toISOString().split("T")[0] : "",
       }))
     }
-    locale="de"                      // ✅ German calendar
-    dateFormat="dd.MM.yyyy"          // ✅ Format: 23.10.2025
+    locale="de"
+    dateFormat="dd.MM.yyyy"
     placeholderText="TT.MM.JJJJ wählen"
-    minDate={new Date()}             // ✅ Mos lejo data të kaluara
+    minDate={new Date()}
     className={`${inputClass} w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#04436F] focus:border-transparent transition-all`}
   />
 
-  {errors.availabilityFrom && !form.availabilityFrom && (
+  {errors.availabilityFrom && (
     <p className="text-red-600 text-sm mt-2">{errors.availabilityFrom}</p>
   )}
 </div>
@@ -1162,8 +1160,7 @@ Info: z.B. Wochenende Milano oder 10 Tage Kreuzfahrt
   ].map((field) => (
     <div
       key={field.key}
-      hidden={field.hideIfCHPass && form.residencePermit === "CH Pass"}
-      className="flex flex-col gap-2"
+      className={`flex flex-col gap-2${field.hideIfCHPass && form.residencePermit === "CH Pass" ? " hidden" : ""}`}
     >
       <label className="text-sm font-medium text-gray-700">
         {field.label}{" "}
@@ -1301,6 +1298,7 @@ Info: z.B. Wochenende Milano oder 10 Tage Kreuzfahrt
 
 
         {/* Navigation Buttons */}
+{!emailExists && (
 <div className="pt-6 flex justify-end gap-4">
   {/* Hide "Zurück" on step 4 */}
   {step > 1 && step !== 4 && (
@@ -1324,13 +1322,13 @@ Info: z.B. Wochenende Milano oder 10 Tage Kreuzfahrt
   ) : (
     <button
       type="submit"
-  onClick={() => router.push("/")}
       className="px-6 py-3 bg-[#04436F] text-white rounded-lg"
     >
       Registrierung abschliessen
     </button>
   )}
 </div>
+)}
 
         </form>
       </div>

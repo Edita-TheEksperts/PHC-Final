@@ -72,7 +72,7 @@ export default function Home() {
                             placeholder="Ihre E-Mail-Adresse"
                             value={email}
                             onChange={e => setEmail(e.target.value)}
-                            className="w-full border border-gray-300 rounded-xl px-5 py-3 text-base focus:ring-2 focus:ring-[#04436F] outline-none mb-2"
+                            className="w-full border border-gray-300 rounded-xl px-5 py-3 text-base text-gray-900 focus:ring-2 focus:ring-[#04436F] outline-none mb-2"
                           />
                           <button
                             onClick={() => {
@@ -157,7 +157,7 @@ export default function Home() {
             placeholder="Ihre E-Mail-Adresse"
             value={email}
             onChange={e => setEmail(e.target.value)}
-            className="w-full border border-gray-300 rounded-xl px-5 py-3 text-base focus:ring-2 focus:ring-[#04436F] outline-none mb-2"
+            className="w-full border border-gray-300 rounded-xl px-5 py-3 text-base text-gray-900 focus:ring-2 focus:ring-[#04436F] outline-none mb-2"
           />
           <button
             onClick={() => {
@@ -1593,7 +1593,7 @@ export default function Home() {
             placeholder="Ihre E-Mail-Adresse"
             value={email}
             onChange={e => setEmail(e.target.value)}
-            className="w-full border border-gray-300 rounded-xl px-5 py-3 text-base focus:ring-2 focus:ring-[#04436F] outline-none mb-2"
+            className="w-full border border-gray-300 rounded-xl px-5 py-3 text-base text-gray-900 focus:ring-2 focus:ring-[#04436F] outline-none mb-2"
             required
           />
           <button

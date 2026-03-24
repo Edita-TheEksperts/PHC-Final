@@ -1,4 +1,5 @@
 import { prisma } from '../../lib/prisma';
+import { sendClientWelcomeEmail } from '../../lib/mailer';
 
 // Remove null, undefined, or empty string values
 function cleanData(obj) {
@@ -235,6 +236,19 @@ export default async function handler(req, res) {
       // still continue
     }
   }
+
+  // Send welcome email once at step 4 completion
+  try {
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true, firstName: true, lastName: true } });
+    if (user?.email) {
+      await sendClientWelcomeEmail({
+        email: user.email,
+        firstName: user.firstName ?? "",
+        lastName: user.lastName ?? "",
+        passwordLink: `${process.env.NEXT_PUBLIC_BASE_URL}/forgot-password`,
+      });
+    }
+  } catch (_) {}
 
   return res.status(200).json({ success: true });
 }

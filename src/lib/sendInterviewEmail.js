@@ -15,7 +15,7 @@ export default async function sendInterviewEmail(email, firstName = "") {
 
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: auto; padding: 20px;">
-      <p>Grüezi ${firstName || "Bewerber/in"}</p>
+      <p>Hallo ${firstName || "Bewerber/in"}</p>
       <p>Vielen Dank für Ihre Bewerbung bei der <strong>Prime Home Care AG</strong>.</p>
       <p>Wir haben Ihre Unterlagen erfolgreich erhalten und werden diese sorgfältig prüfen.</p>
       <p>Wir melden uns so bald wie möglich mit weiteren Informationen bei Ihnen.</p>

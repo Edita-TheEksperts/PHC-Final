@@ -29,7 +29,7 @@ export async function sendAssignmentCancelledEmail({ schedule, reason }) {
         subject: 'Ihr Einsatz wurde storniert',
         html: `
           <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-            <p>Grüezi ${user.firstName || ''} ${user.lastName || ''}</p>
+            <p>Hallo ${user.firstName || ''} ${user.lastName || ''}</p>
             <p>Ihr geplanter Einsatz am <b>${formattedDate}</b> um <b>${formattedTime}</b> (${duration}) für den Service <b>${service}</b> wurde storniert.</p>
             <p>Grund: ${reason || '-'}</p>
             <br>
@@ -51,7 +51,7 @@ export async function sendAssignmentCancelledEmail({ schedule, reason }) {
         subject: 'Ihr Einsatz wurde storniert',
         html: `
           <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-            <p>Grüezi ${employee.firstName || ''} ${employee.lastName || ''}</p>
+            <p>Hallo ${employee.firstName || ''} ${employee.lastName || ''}</p>
             <p>Ihr geplanter Einsatz am <b>${formattedDate}</b> um <b>${formattedTime}</b> (${duration}) für den Service <b>${service}</b> wurde storniert.</p>
             <p>Grund: ${reason || '-'}</p>
             <br>
@@ -97,7 +97,7 @@ export async function sendSystemMaintenanceEmail({ email, firstName, lastName, d
       subject: 'Information: Vorübergehende Systemwartung',
       html: `
         <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-          <p>Grüezi ${firstName || ''} ${lastName || ''}</p>
+          <p>Hallo ${firstName || ''} ${lastName || ''}</p>
           <p>Am ${date} zwischen ${timeStart} und ${timeEnd} führen wir geplante Wartungsarbeiten an unserem System durch.</p>
           <p>In diesem Zeitraum ist das Kundenportal vorübergehend nicht erreichbar. Bei dringenden Anliegen erreichen Sie uns telefonisch unter ${phone || '043 200 10 20'}.</p>
           <p>Vielen Dank für Ihr Verständnis.</p>
@@ -123,7 +123,7 @@ export async function sendFeedbackRequestEmail({ email, firstName, lastName, car
       subject: 'Wie zufrieden sind Sie mit unserer Betreuung?',
       html: `
         <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-          <p>Grüezi ${firstName} ${lastName}</p>
+          <p>Hallo ${firstName} ${lastName}</p>
           <p>Wir hoffen, dass Sie mit der Betreuung durch ${caregiverName} zufrieden waren.</p>
           <p>Wir freuen uns über Ihre Rückmeldung: <a href="${feedbackLink}">${feedbackLink}</a></p>
           <p>Ihr Feedback hilft uns, unsere Dienstleistung weiter zu verbessern.</p>
@@ -177,7 +177,7 @@ export async function sendAssignmentAcceptedEmail({ email, firstName, lastName, 
       subject: 'Ihre Buchung wurde erfolgreich bestätigt',
       html: `
         <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-          <p>Grüezi ${firstName} ${lastName}</p>
+          <p>Hallo ${firstName} ${lastName}</p>
           <p>Ihre Buchung wurde erfolgreich bestätigt und folgender Mitarbeiter wurde Ihnen zugewiesen.</p>
           <p><strong>Betreuer:</strong> ${employeeFirstName} ${employeeLastName}</p>
           <p><strong>Kontakt:</strong> ${employeePhone}</p>
@@ -206,7 +206,7 @@ export async function sendCancellationConfirmationEmail({ email, firstName, last
       subject: 'Bestätigung Ihrer Stornierung',
       html: `
         <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-          <p>Grüezi ${firstName} ${lastName}</p>
+          <p>Hallo ${firstName} ${lastName}</p>
           <p>Ihr Termin am:<br>${weekday}<br>${date}<br>um ${time} wurde erfolgreich storniert.</p>
           <p>Service: ${serviceName || ''}</p>
           <p>Rückerstattung: ${refundPercent || 0}%</p>
@@ -233,7 +233,7 @@ export async function sendPaymentConfirmationEmail({ email, firstName, lastName,
       subject: 'Zahlungsbestätigung / Rechnung zu Ihrer Buchung',
       html: `
         <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-          <p>Grüezi ${firstName} ${lastName}</p>
+          <p>Hallo ${firstName} ${lastName}</p>
           <p>Wir bestätigen den Eingang Ihrer Zahlung über CHF ${amount} zur Buchung ${bookingReference}.</p>
           <p>Ihre Rechnung finden Sie auf Ihrer persönlichen PHC-Plattform.</p>
           <p>Bei Fragen stehen wir Ihnen jederzeit gerne zur Verfügung.</p>
@@ -298,7 +298,7 @@ export async function sendPaymentUpdateRequestEmail({ name, email: userEmail }) 
 export async function sendCapacityLimitEmail({ email, firstName, lastName }) {
   const html = `
     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-      <p>Grüezi ${firstName} ${lastName}</p>
+      <p>Hallo ${firstName} ${lastName}</p>
       <p>Vielen Dank für Ihre Online-Buchung bei Prime Home Care.</p>
       <p>Leider müssen wir Ihnen mitteilen, dass wir für den von Ihnen gebuchten Zeitraum aktuell keine passenden Kapazitäten zur Verfügung haben. Ein geeignetes Matching zwischen Kunde und Betreuungsperson ist derzeit nicht möglich.</p>
       <p>Ihre Buchung wird entsprechend nicht ausgeführt. Eine Belastung erfolgt nicht.</p>
@@ -326,7 +326,7 @@ export async function sendCapacityLimitEmail({ email, firstName, lastName }) {
 export async function sendClientTerminationEmail({ email, firstName, lastName, endDate }) {
   const html = `
     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-      <p>Grüezi ${firstName} ${lastName}</p>
+      <p>Hallo ${firstName} ${lastName}</p>
       <p>Wir bestätigen hiermit die Beendigung der Zusammenarbeit zwischen Ihnen und der Prime Home Care AG.</p>
       <p>Es werden ab ${endDate} keine weiteren Dienstleistungen mehr erbracht.</p>
       <p>Ihr Kundenkonto im Prime-Home-Care-Portal wird entsprechend geschlossen. Ein Zugriff auf das Kundenportal ist danach nicht mehr möglich.</p>
@@ -354,7 +354,7 @@ export async function sendClientTerminationEmail({ email, firstName, lastName, e
 export async function sendRejectionWarningEmail({ email, firstName }) {
   const html = `
     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-      <p>Grüezi ${firstName}</p>
+      <p>Hallo ${firstName}</p>
       <p>Uns ist aufgefallen, dass Sie in letzter Zeit mehrere Einsatzvorschläge abgelehnt haben.</p>
       <p>Bitte beachten Sie, dass eine regelmässige Ablehnung von Einsätzen unsere Einsatzplanung erschwert.</p>
       <p>Gerne möchten wir mit Ihnen besprechen, ob es bestimmte Gründe gibt und wie wir Sie besser unterstützen können.</p>
@@ -385,7 +385,7 @@ export async function sendClientWelcomeEmail({ email, firstName, lastName, passw
 
   const html = `
     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-      <p>Grüezi ${firstName} ${lastName}</p>
+      <p>Hallo ${firstName} ${lastName}</p>
       <p>Vielen Dank für Ihre Registrierung bei Prime Home Care AG.</p>
       <p>Ihr Zugang zum Kundenportal wurde erfolgreich eingerichtet. Sie können dort:</p>
       <ul>
@@ -551,7 +551,7 @@ export async function sendApprovalEmail(employee, plainPassword) {
         subject: "Willkommen im Prime Home Care Team – Ihr Zugang ist aktiviert",
         html: `
           <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-            <p>Grüezi ${firstName}</p>
+            <p>Hallo ${firstName}</p>
             <p>Vielen Dank für Ihre Registrierung bei der Prime Home Care AG.</p>
             <p>Ihr Zugang zum Mitarbeiter-Portal ist jetzt freigeschaltet.</p>
             <ul>

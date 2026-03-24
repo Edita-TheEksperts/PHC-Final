@@ -1,8 +1,6 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../../lib/prisma";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
-
-const prisma = new PrismaClient();
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
@@ -10,21 +8,30 @@ export default async function handler(req, res) {
   const { email } = req.body;
   if (!email) return res.status(400).json({ message: "Email is required" });
 
+  // Check both user (client) and employee tables
   const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) {
+  const employee = !user ? await prisma.employee.findUnique({ where: { email } }) : null;
+
+  if (!user && !employee) {
     return res.status(404).json({ message: "Email not found" });
   }
 
   const resetToken = crypto.randomBytes(32).toString("hex");
+  const resetTokenExpiry = new Date(Date.now() + 3600000); // 1h
 
-  await prisma.user.update({
-    where: { email },
-    data: {
-      resetToken,
-      resetTokenExpiry: new Date(Date.now() + 3600000), // 1h
-    },
-  });
+  if (user) {
+    await prisma.user.update({
+      where: { email },
+      data: { resetToken, resetTokenExpiry },
+    });
+  } else {
+    await prisma.employee.update({
+      where: { email },
+      data: { resetToken, resetTokenExpiry },
+    });
+  }
 
+  const firstName = user ? user.firstName : employee.firstName;
   const resetLink = `${process.env.NEXT_PUBLIC_BASE_URL}/reset-password?resetToken=${resetToken}`;
 
   const transporter = nodemailer.createTransport({
@@ -44,7 +51,7 @@ export default async function handler(req, res) {
       subject: "Passwort zurücksetzen",
       html: `
         <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-          <p>Hallo ${user.firstName}</p>
+          <p>Hallo ${firstName}</p>
           <p>Klicken Sie auf den folgenden Link, um Ihr Passwort zurückzusetzen:</p>
           <a 
             href="${resetLink}"

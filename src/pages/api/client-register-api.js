@@ -180,6 +180,8 @@ const toStrAllowEmpty = (v) => {
       startTime: s.startTime,
       hours: toInt(s.hours) ?? 0,
       date: s.date ? new Date(s.date) : null,
+      serviceName: s.serviceName || null,
+      subServiceName: s.subServiceName || null,
     }));
 
     const totalHours = schedulesCreate.reduce(
@@ -323,21 +325,7 @@ const toStrAllowEmpty = (v) => {
       });
     }
 
-    /* -------- SEND WELCOME EMAIL (new users or users without a password) -------- */
-
-    const shouldSendEmail = isNewUser || !user.password;
-
-    if (shouldSendEmail) {
-      try {
-        await sendClientWelcomeEmail({
-          email,
-          firstName: firstName ?? "",
-          lastName: lastName ?? "",
-          passwordLink: `${process.env.NEXT_PUBLIC_BASE_URL}/forgot-password`,
-        });
-      } catch (emailErr) {
-      }
-    }
+    /* -------- WELCOME EMAIL is sent at step 4 (Abschluss) via save-optional-data -------- */
 
     /* --------------------------------------------------
        8️⃣ SALESFORCE SYNC

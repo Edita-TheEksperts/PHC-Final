@@ -39,7 +39,7 @@ function SystemMaintenanceEmailPage() {
   const emailSubject = "Information: Vorübergehende Systemwartung";
 
   const emailBody = `
-Grüezi  
+Hallo  
 
 Vom ${formatDate(dateStart)} bis zum ${formatDate(dateEnd)} zwischen ${timeStart} und ${timeEnd}  
 führen wir geplante Wartungsarbeiten an unserem System durch.  

@@ -19,7 +19,7 @@ export async function sendPendingReminders() {
     if (reminder.type === "4h_reminder") {
       subject = "Ihre Betreuung wartet auf Sie";
       body = `
-        <p>Grüezi ${user.firstName} ${user.lastName}</p>
+        <p>Hallo ${user.firstName} ${user.lastName}</p>
         <p>Sie haben Ihr Kundenkonto erfolgreich erstellt – vielen Dank! Uns ist aufgefallen, dass Sie noch keine Buchung abgeschlossen haben.</p>
         <p>Möchten Sie Hilfe oder eine telefonische Beratung? Kontaktieren Sie uns gerne unter ${process.env.SUPPORT_PHONE} oder buchen Sie direkt hier: <a href="${process.env.BOOKING_LINK}">Direktlink zur Buchung</a>.</p>
         <p>Freundliche Grüsse<br/>Prime Home Care AG</p>
@@ -27,7 +27,7 @@ export async function sendPendingReminders() {
     } else if (reminder.type === "48h_reminder") {
       subject = "Bitte fehlende Informationen in der Checkliste ergänzen";
 body = `
-  <p>Grüezi ${user.firstName} ${user.lastName}</p>
+  <p>Hallo ${user.firstName} ${user.lastName}</p>
 
   <p>Wir bitten Sie freundlich, die noch ausstehenden Informationen auf Ihrer Kundenplattform zu ergänzen.</p>
 
