@@ -5,6 +5,9 @@ import { useState } from "react";
 
 export default function Home() {
     const [email, setEmail] = useState("");
+    const [email2, setEmail2] = useState("");
+    const [email3, setEmail3] = useState("");
+    const [email4, setEmail4] = useState("");
     return (
         <div className="bg-[#FAFCFF] p-4">
           <section className="lg:block hidden relative max-w-[1300px] h-[800px] mx-auto mt-2 md:mt-[20px] lg:mb-[160px]">
@@ -82,7 +85,7 @@ export default function Home() {
                                 return;
                               }
                               localStorage.setItem("employeeEmail", email);
-                              window.location.href = "/employee-register";
+                              window.location.href = `/employee-register?email=${encodeURIComponent(email)}`;
                             }}
                             className="mt-[6px] font-metropolis flex flex-col items-center text-center font-metropolis text-[18px] font-[500] leading-[21.6px] rounded-[50px] px-[20px] py-[12px] bg-primaryButton transition-all duration-0 w-full"
                           >
@@ -167,7 +170,7 @@ export default function Home() {
                 return;
               }
               localStorage.setItem("employeeEmail", email);
-              window.location.href = "/employee-register";
+              window.location.href = `/employee-register?email=${encodeURIComponent(email)}`;
             }}
             className="font-metropolis flex flex-col items-center text-center font-metropolis text-[18px] font-[500] leading-[21.6px] rounded-[15px] mt-[32px] px-[20px] py-[12px] bg-primaryButton transition-all duration-0 w-full"
           >
@@ -213,19 +216,19 @@ export default function Home() {
       <input
         type="email"
         placeholder="Ihre E-Mail-Adresse"
-        value={email}
-        onChange={e => setEmail(e.target.value)}
-        className="w-full border border-gray-300 rounded-xl px-5 py-3 text-base focus:ring-2 focus:ring-[#04436F] outline-none mb-2"
+        value={email2}
+        onChange={e => setEmail2(e.target.value)}
+        className="w-full border border-gray-300 rounded-xl px-5 py-3 text-base text-gray-900 focus:ring-2 focus:ring-[#04436F] outline-none mb-2"
       />
       <button
         onClick={() => {
           const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-          if (!emailRegex.test(email)) {
+          if (!emailRegex.test(email2)) {
             alert("Bitte geben Sie eine gültige E-Mail-Adresse ein.");
             return;
           }
-          localStorage.setItem("employeeEmail", email);
-          window.location.href = "/employee-register";
+          localStorage.setItem("employeeEmail", email2);
+          window.location.href = `/employee-register?email=${encodeURIComponent(email2)}`;
         }}
         className="mt-[6px] px-8 py-3 text-white font-metropolis text-[18px] font-medium leading-[21.6px] bg-[#04436F] rounded-full w-full"
         style={{ borderRadius: "50px" }}
@@ -272,19 +275,19 @@ export default function Home() {
       <input
         type="email"
         placeholder="Ihre E-Mail-Adresse"
-        value={email}
-        onChange={e => setEmail(e.target.value)}
-        className="w-full border border-gray-300 rounded-xl px-5 py-3 text-base focus:ring-2 focus:ring-[#04436F] outline-none mb-2"
+        value={email2}
+        onChange={e => setEmail2(e.target.value)}
+        className="w-full border border-gray-300 rounded-xl px-5 py-3 text-base text-gray-900 focus:ring-2 focus:ring-[#04436F] outline-none mb-2"
       />
       <button
         onClick={() => {
           const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-          if (!emailRegex.test(email)) {
+          if (!emailRegex.test(email2)) {
             alert("Bitte geben Sie eine gültige E-Mail-Adresse ein.");
             return;
           }
-          localStorage.setItem("employeeEmail", email);
-          window.location.href = "/employee-register";
+          localStorage.setItem("employeeEmail", email2);
+          window.location.href = `/employee-register?email=${encodeURIComponent(email2)}`;
         }}
         className="md:py-[12px] md:px-[20px] text-[18px] font-[500] text-white bg-[#04436F] rounded-[10px] px-[20px] py-[12px] w-full"
         style={{
@@ -1591,20 +1594,20 @@ export default function Home() {
           <input
             type="email"
             placeholder="Ihre E-Mail-Adresse"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
+            value={email4}
+            onChange={e => setEmail4(e.target.value)}
             className="w-full border border-gray-300 rounded-xl px-5 py-3 text-base text-gray-900 focus:ring-2 focus:ring-[#04436F] outline-none mb-2"
             required
           />
           <button
             onClick={() => {
               const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-              if (!emailRegex.test(email)) {
+              if (!emailRegex.test(email4)) {
                 alert('Bitte geben Sie eine gültige E-Mail-Adresse ein.');
                 return;
               }
-              localStorage.setItem('employeeRegisterEmail', email);
-              window.location.href = '/employee-register';
+              localStorage.setItem('employeeEmail', email4);
+              window.location.href = `/employee-register?email=${encodeURIComponent(email4)}`;
             }}
             className="rounded-full px-5 py-3 text-white font-medium bg-[#04436F] hover:bg-[#033757] transition"
             disabled={!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)}
@@ -1654,23 +1657,23 @@ export default function Home() {
     <input
       type="email"
       placeholder="Ihre E-Mail-Adresse"
-      value={email}
-      onChange={e => setEmail(e.target.value)}
-      className="w-full border border-gray-300 rounded-xl px-5 py-3 text-base focus:ring-2 focus:ring-[#04436F] outline-none mb-2"
+      value={email3}
+      onChange={e => setEmail3(e.target.value)}
+      className="w-full border border-gray-300 rounded-xl px-5 py-3 text-base text-gray-900 focus:ring-2 focus:ring-[#04436F] outline-none mb-2"
       required
     />
     <button
       className="w-full px-8 py-3 text-white font-metropolis text-[18px] font-medium leading-[21.6px] bg-[#04436F] rounded-full"
       style={{ borderRadius: '50px' }}
       onClick={() => {
-        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        if (!email3 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email3)) {
           alert('Bitte gib eine gültige E-Mail-Adresse ein.');
           return;
         }
-        localStorage.setItem('employeeRegisterEmail', email);
-        window.location.href = '/employee-register';
+        localStorage.setItem('employeeEmail', email3);
+        window.location.href = `/employee-register?email=${encodeURIComponent(email3)}`;
       }}
-      disabled={!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)}
+      disabled={!email2 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email2)}
     >
       Hier klicken, um dein Profil zu erstellen und mehr zu erfahren
     </button>
@@ -1712,23 +1715,23 @@ export default function Home() {
     <input
       type="email"
       placeholder="Ihre E-Mail-Adresse"
-      value={email}
-      onChange={e => setEmail(e.target.value)}
-      className="w-full border border-gray-300 rounded-xl px-5 py-3 text-base focus:ring-2 focus:ring-[#04436F] outline-none mb-2"
+      value={email3}
+      onChange={e => setEmail3(e.target.value)}
+      className="w-full border border-gray-300 rounded-xl px-5 py-3 text-base text-gray-900 focus:ring-2 focus:ring-[#04436F] outline-none mb-2"
       required
     />
     <button
       className="w-full md:py-[12px] md:px-[20px] text-[18px] font-[500] text-white bg-[#04436F] rounded-full px-[20px] py-[12px] disabled:opacity-50"
       style={{ borderRadius: '50px', fontSize: '18px', fontWeight: '500', lineHeight: '21.6px', color: '#FFF', textAlign: 'center', fontFamily: 'Metropolis', background: '#04436F' }}
       onClick={() => {
-        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        if (!email3 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email3)) {
           alert('Bitte gib eine gültige E-Mail-Adresse ein.');
           return;
         }
-        localStorage.setItem('employeeRegisterEmail', email);
-        window.location.href = '/employee-register';
+        localStorage.setItem('employeeEmail', email3);
+        window.location.href = `/employee-register?email=${encodeURIComponent(email3)}`;
       }}
-      disabled={!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)}
+      disabled={!email3 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email3)}
     >
       Hier klicken, um dein Profil zu erstellen und mehr zu erfahren
     </button>

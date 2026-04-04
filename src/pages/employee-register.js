@@ -154,12 +154,14 @@ const refs = {
 const [emailExists, setEmailExists] = useState(false);
 
 useEffect(() => {
-  const savedEmail = typeof window !== "undefined" && localStorage.getItem("employeeEmail");
+  const urlParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+  const emailFromUrl = urlParams?.get("email") || "";
+  const savedEmail = emailFromUrl || (typeof window !== "undefined" && localStorage.getItem("employeeEmail")) || "";
   const savedAgb = typeof window !== "undefined" && localStorage.getItem("employeeAgbAccepted");
 
   setForm((prev) => ({
     ...prev,
-    email: savedEmail || "",
+    email: savedEmail,
   }));
 
   setAgbAccepted(savedAgb === "true");
