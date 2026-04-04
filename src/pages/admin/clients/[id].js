@@ -85,6 +85,18 @@ export default function ClientDetails() {
     }
   }
 
+  // Internal Notes
+  const [clientNotes, setClientNotes] = useState([]);
+  const [clientNoteText, setClientNoteText] = useState("");
+
+  useEffect(() => {
+    if (!id) return;
+    fetch(`/api/admin/notes?userId=${id}`)
+      .then(r => r.json())
+      .then(d => setClientNotes(d.notes || []))
+      .catch(() => {});
+  }, [id]);
+
   // Abschluss
   const [showAbschluss, setShowAbschluss] = useState(false);
   const [abschlussData, setAbschlussData] = useState(null);
@@ -1112,11 +1124,88 @@ const QUESTIONNAIRE_SECTIONS = useMemo(
 
       <div className="pt-8">
         <button
-          onClick={() => router.push("/admin/clients")}
+          onClick={() => router.push("/admin/kunden")}
           className="px-6 py-2 bg-[#04436F] text-white rounded hover:bg-[#033350] transition"
         >
           ← Zurück zu Kunden
         </button>
+      </div>
+
+      {/* Admin-Aktionen & Notizen Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 px-6 lg:px-8">
+        {/* Interne Notizen */}
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3">Interne Notizen</h3>
+          <p className="text-xs text-gray-400 mb-3">Nicht sichtbar für Kunde</p>
+          <textarea
+            value={clientNoteText}
+            onChange={(e) => setClientNoteText(e.target.value)}
+            placeholder="Notiz hinzufügen..."
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm min-h-[60px] focus:outline-none focus:ring-2 focus:ring-[#04436F]/20 mb-2"
+          />
+          <button
+            onClick={async () => {
+              if (!clientNoteText.trim()) return;
+              try {
+                const res = await fetch("/api/admin/notes", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ text: clientNoteText, userId: client.id, author: "Admin" }),
+                });
+                if (res.ok) {
+                  const note = await res.json();
+                  setClientNotes(prev => [note, ...prev]);
+                  setClientNoteText("");
+                }
+              } catch {}
+            }}
+            className="px-4 py-2 bg-[#04436F] text-white text-xs font-medium rounded-lg hover:bg-[#033558] transition"
+          >
+            Notiz speichern
+          </button>
+          {clientNotes.length > 0 && (
+            <div className="mt-3 space-y-2 max-h-[200px] overflow-y-auto">
+              {clientNotes.map(n => (
+                <div key={n.id} className="bg-gray-50 border border-gray-100 rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-medium text-gray-500">{n.author}</span>
+                    <span className="text-xs text-gray-400">{new Date(n.createdAt).toLocaleDateString("de-CH")}</span>
+                  </div>
+                  <p className="text-sm text-gray-800">{n.text}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Admin-Aktionen */}
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3">Admin-Aktionen</h3>
+          <div className="space-y-2">
+            <button onClick={() => router.push("/admin/einsaetze")} className="w-full flex items-center justify-between px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition text-sm font-medium text-gray-900">
+              Betreuungsperson zuweisen / wechseln
+              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+            </button>
+            <button
+              onClick={async () => {
+                if (!confirm("Kunde wirklich temporär pausieren?")) return;
+                await fetch("/api/admin/set-status", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "client", id: client.id, status: "inaktiv" }) });
+                setClient(prev => ({ ...prev, status: "inaktiv" }));
+              }}
+              className="w-full flex items-center justify-between px-4 py-2.5 bg-gray-50 border border-amber-200 rounded-lg hover:bg-amber-50 transition text-sm font-medium text-amber-700"
+            >
+              Kunde temporär pausieren
+              <svg className="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            </button>
+            <button
+              onClick={() => setShowAbschluss(true)}
+              className="w-full flex items-center justify-between px-4 py-2.5 bg-gray-50 border border-red-200 rounded-lg hover:bg-red-50 transition text-sm font-medium text-red-700"
+            >
+              Betreuung beenden
+              <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Abschluss Modal */}

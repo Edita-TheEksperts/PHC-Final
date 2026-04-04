@@ -91,10 +91,10 @@ useEffect(() => {
 </div>
       {/* Register and Login Buttons */}
       <div className="flex gap-4 hidden lg:flex">
-        <Link href="/register-client" className=" px-[34px] py-[12px] rounded-[6px] bg-[#A99558] text-white text-center text-[15px] font-[Metropolis] font-medium leading-normal tracking-[-0.225px]">
+        <Link href="/register-client" className=" px-[34px] py-[12px] rounded-[6px] bg-[#B99B5F] text-white text-center text-[15px] font-[Metropolis] font-medium leading-normal tracking-[-0.225px]">
           Jetzt Buchen
         </Link>
-        <Link href="/login" className="px-[34px] py-[12px] rounded-[6px] border border-[#A99558] bg-white text-[#A99558] font-[Metropolis] text-center  text-[15px] font-medium leading-normal tracking-[-0.225px]">
+        <Link href="/login" className="px-[34px] py-[12px] rounded-[6px] border border-[#B99B5F] bg-white text-[#B99B5F] font-[Metropolis] text-center  text-[15px] font-medium leading-normal tracking-[-0.225px]">
           Log in
         </Link>
       </div>
@@ -135,7 +135,7 @@ useEffect(() => {
             <>
               <Link
                 href={link.path}
-                className="text-[18px] font-medium text-[#222] hover:text-[#A99558]"
+                className="text-[18px] font-medium text-[#222] hover:text-[#B99B5F]"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 {link.name}
@@ -145,7 +145,7 @@ useEffect(() => {
                   <Link
                     key={subIndex}
                     href={sub.path}
-                    className="text-[16px] text-[#555] hover:text-[#A99558]"
+                    className="text-[16px] text-[#555] hover:text-[#B99B5F]"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     {sub.name}
@@ -158,7 +158,7 @@ useEffect(() => {
               href={link.path}
               className={`text-[18px] font-medium ${
                 router.pathname === link.path ? 'text-[#04436F]' : 'text-[#222]'
-              } hover:text-[#A99558]`}
+              } hover:text-[#B99B5F]`}
               onClick={() => setIsMobileMenuOpen(false)}
             >
               {link.name}
@@ -171,13 +171,13 @@ useEffect(() => {
       <div className="flex flex-col gap-4 mt-4 w-full items-center">
         <Link
           href="/register-client"
-          className="px-[44px] py-[15px] rounded-[6px] bg-[#A99558] text-white text-[15px] font-medium tracking-[-0.225px] w-full text-center"
+          className="px-[44px] py-[15px] rounded-[6px] bg-[#B99B5F] text-white text-[15px] font-medium tracking-[-0.225px] w-full text-center"
         >
           Jetzt Buchen
         </Link>
         <Link
           href="/login"
-          className="px-[44px] py-[15px] rounded-[6px] border border-[#A99558] bg-white text-[#A99558] text-[15px] font-medium tracking-[-0.225px] w-full text-center"
+          className="px-[44px] py-[15px] rounded-[6px] border border-[#B99B5F] bg-white text-[#B99B5F] text-[15px] font-medium tracking-[-0.225px] w-full text-center"
         >
           Log in
         </Link>

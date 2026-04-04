@@ -72,17 +72,42 @@ const [licenseData, setLicenseData] = useState({});
 const [editSkills, setEditSkills] = useState(false);
 const [skillsData, setSkillsData] = useState({});
 const [einsatzFilter, setEinsatzFilter] = useState("all");
-
-
+const [noteText, setNoteText] = useState("");
+const [notes, setNotes] = useState([]);
+const [notesLoaded, setNotesLoaded] = useState(false);
+const [activeTab, setActiveTab] = useState("profil");
+const [feedbackList, setFeedbackList] = useState([]);
+const [avgRating, setAvgRating] = useState(null);
 
   useEffect(() => {
     if (!id) return;
     async function fetchEmployee() {
-      const res = await fetch(`/api/admin/employee/${id}`);
-      const data = await res.json();
-      setEmployee(data);
+      try {
+        const res = await fetch(`/api/admin/employee/${id}`);
+        const data = await res.json();
+        setEmployee(data);
+      } catch { setEmployee(null); }
     }
     fetchEmployee();
+    async function fetchNotes() {
+      try {
+        const res = await fetch(`/api/admin/notes?employeeId=${id}`);
+        const data = await res.json();
+        setNotes(data.notes || []);
+      } catch { setNotes([]); }
+      setNotesLoaded(true);
+    }
+    fetchNotes();
+    async function fetchFeedback() {
+      try {
+        const res = await fetch(`/api/admin/feedback?employeeId=${id}`);
+        const data = await res.json();
+        setFeedbackList(data.feedback || []);
+        const avg = data.averages?.find(a => a.employeeId === id);
+        if (avg) setAvgRating(avg);
+      } catch {}
+    }
+    fetchFeedback();
   }, [id]);
 
   if (!employee) return <p className="p-6 text-gray-600">Loading...</p>;
@@ -242,7 +267,8 @@ const filteredTermine =
 
   const fileLinks = [
     { key: "passportFile", label: "Reisepass" },
-    { key: "visaFile", label: "Visum" },
+    { key: "passportBackFile", label: "Ausweis / Pass (Rückseite)" },
+    { key: "visaFile", label: "Aufenthaltsbewilligung / Visum" },
     { key: "policeLetterFile", label: "Polizeiliches Führungszeugnis" },
     { key: "cvFile", label: "Lebenslauf" },
     { key: "certificateFile", label: "Zertifikat" },
@@ -250,13 +276,14 @@ const filteredTermine =
     { key: "profilePhoto", label: "Profilfoto" },
   ];
 
-  const [activeTab, setActiveTab] = useState("profil");
-
   const tabs = [
     { key: "profil",    label: "Profil" },
     { key: "einsaetze", label: `Einsätze${employee.assignments?.length ? ` (${employee.assignments.length})` : ""}` },
     { key: "termine",   label: `Termine${employee.schedules?.length ? ` (${employee.schedules.length})` : ""}` },
     { key: "urlaube",   label: `Urlaube${employee.vacations?.length ? ` (${employee.vacations.length})` : ""}` },
+    { key: "notizen",   label: "Notizen" },
+    { key: "bewertungen", label: `Bewertungen${feedbackList.length ? ` (${feedbackList.length})` : ""}` },
+    { key: "aktionen",  label: "Admin-Aktionen" },
   ];
 
   const statusBadgeClass = {
@@ -272,7 +299,7 @@ const filteredTermine =
       {/* Header */}
       <div className="flex items-center gap-4">
         <button
-          onClick={() => router.push("/admin/employees")}
+          onClick={() => router.push("/admin/bewerber")}
           className="p-2 rounded-lg border border-gray-200 hover:bg-gray-100 transition text-gray-500"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -296,7 +323,7 @@ const filteredTermine =
               key={t.key}
               onClick={() => setActiveTab(t.key)}
               className={`px-5 py-3 text-sm font-medium whitespace-nowrap transition border-b-2 -mb-px
-                ${activeTab === t.key ? "border-[#0F1F38] text-[#0F1F38]" : "border-transparent text-gray-500 hover:text-gray-700"}`}
+                ${activeTab === t.key ? "border-[#04436F] text-[#04436F]" : "border-transparent text-gray-500 hover:text-gray-700"}`}
             >
               {t.label}
             </button>
@@ -391,7 +418,7 @@ const filteredTermine =
                   {[["all","Alle"],["pending","Offen"],["active","Aktiv"],["accepted","Angenommen"],["rejected","Abgelehnt"]].map(([val, lbl]) => (
                     <button key={val} onClick={() => setEinsatzFilter(val)}
                       className={`px-3 py-1 rounded-lg text-xs font-medium transition
-                        ${einsatzFilter === val ? "bg-[#0F1F38] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
+                        ${einsatzFilter === val ? "bg-[#04436F] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
                       {lbl}
                     </button>
                   ))}
@@ -427,7 +454,7 @@ const filteredTermine =
                   {[["all","Alle"],["active","Ausstehend"],["completed","Abgeschlossen"],["cancelled","Abgelehnt"]].map(([val, lbl]) => (
                     <button key={val} onClick={() => setTermineFilter(val)}
                       className={`px-3 py-1 rounded-lg text-xs font-medium transition
-                        ${termineFilter === val ? "bg-[#0F1F38] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
+                        ${termineFilter === val ? "bg-[#04436F] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
                       {lbl}
                     </button>
                   ))}
@@ -482,6 +509,150 @@ const filteredTermine =
       {/* Edit Modals */}
       {editPersonal    && <EditModal title="Persönliche Informationen" data={personalData}    onChange={setPersonalData}    onSave={savePersonal}    onClose={() => setEditPersonal(false)} />}
       {editAddress     && <EditModal title="Adresse & Nationalität"    data={addressData}     onChange={setAddressData}     onSave={saveAddress}     onClose={() => setEditAddress(false)} />}
+      {/* Notizen Tab */}
+      {activeTab === "notizen" && (
+        <div className="space-y-4">
+          <div className="bg-gray-50 rounded-xl border border-gray-100 p-5">
+            <h3 className="text-sm font-semibold text-gray-900 mb-3">Interne Notizen (Admin-only)</h3>
+            <p className="text-xs text-gray-400 mb-3">Nicht sichtbar für Mitarbeiter</p>
+            <textarea
+              value={noteText}
+              onChange={(e) => setNoteText(e.target.value)}
+              placeholder="Notiz hinzufügen..."
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm min-h-[80px] focus:outline-none focus:ring-2 focus:ring-[#04436F]/20"
+            />
+            <button
+              onClick={async () => {
+                if (!noteText.trim()) return;
+                try {
+                  const res = await fetch("/api/admin/notes", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ text: noteText, employeeId: employee.id, author: "Admin" }),
+                  });
+                  if (res.ok) {
+                    const note = await res.json();
+                    setNotes(prev => [note, ...prev]);
+                    setNoteText("");
+                  }
+                } catch {}
+              }}
+              className="mt-2 px-4 py-2 bg-[#04436F] text-white text-sm font-medium rounded-lg hover:bg-[#033558] transition"
+            >
+              Notiz speichern
+            </button>
+          </div>
+          <div className="space-y-2">
+            {notes.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-4">Keine Notizen vorhanden</p>
+            ) : notes.map((n) => (
+              <div key={n.id || n.createdAt} className="bg-white border border-gray-200 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-gray-500">{n.author}</span>
+                  <span className="text-xs text-gray-400">{new Date(n.createdAt).toLocaleDateString("de-CH")} {new Date(n.createdAt).toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" })}</span>
+                </div>
+                <p className="text-sm text-gray-800">{n.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Bewertungen Tab */}
+      {activeTab === "bewertungen" && (
+        <div className="space-y-4">
+          {avgRating && (
+            <div className="bg-gray-50 rounded-xl border border-gray-100 p-5 flex items-center gap-4">
+              <div className="text-3xl font-bold text-[#B99B5F]">{avgRating.averageRating}</div>
+              <div>
+                <p className="text-sm font-semibold text-gray-900">Durchschnittsbewertung</p>
+                <p className="text-xs text-gray-500">{avgRating.totalRatings} Bewertung{avgRating.totalRatings !== 1 ? "en" : ""}</p>
+              </div>
+            </div>
+          )}
+          {feedbackList.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-8">Keine Bewertungen vorhanden</p>
+          ) : (
+            feedbackList.map(f => (
+              <div key={f.id} className="bg-white border border-gray-200 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-900">{f.user?.firstName} {f.user?.lastName}</span>
+                  <span className="text-xs text-gray-400">{new Date(f.createdAt).toLocaleDateString("de-CH")}</span>
+                </div>
+                <div className="flex items-center gap-1 mb-2">
+                  {[1,2,3,4,5,6].map(s => (
+                    <span key={s} className="text-lg">{s <= f.rating ? "⭐" : "☆"}</span>
+                  ))}
+                </div>
+                {f.comment && <p className="text-sm text-gray-600">{f.comment}</p>}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* Admin-Aktionen Tab */}
+      {activeTab === "aktionen" && (
+        <div className="space-y-4">
+          <div className="bg-gray-50 rounded-xl border border-gray-100 p-5">
+            <h3 className="text-sm font-semibold text-gray-900 mb-4">Admin-Aktionen</h3>
+            <div className="space-y-3">
+              <button
+                onClick={() => router.push(`/admin/einsaetze`)}
+                className="w-full flex items-center justify-between px-4 py-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition"
+              >
+                <span className="text-sm font-medium text-gray-900">Einsatz vorschlagen</span>
+                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+              </button>
+              <button
+                onClick={async () => {
+                  if (!confirm("Profil wirklich deaktivieren? Der Mitarbeiter kann sich nicht mehr einloggen.")) return;
+                  await fetch("/api/admin/set-status", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ type: "employee", id: employee.id, status: "inaktiv" }),
+                  });
+                  setEmployee(prev => ({ ...prev, status: "inaktiv" }));
+                }}
+                className="w-full flex items-center justify-between px-4 py-3 bg-white border border-red-200 rounded-lg hover:bg-red-50 transition"
+              >
+                <span className="text-sm font-medium text-red-700">Profil deaktivieren</span>
+                <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+              </button>
+            </div>
+          </div>
+
+          {/* Bewerbungsverlauf */}
+          <div className="bg-gray-50 rounded-xl border border-gray-100 p-5">
+            <h3 className="text-sm font-semibold text-gray-900 mb-4">Bewerbungs- & Entscheidungsverlauf</h3>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0" />
+                <span className="text-sm text-gray-700">Bewerbung eingegangen: {employee.createdAt ? new Date(employee.createdAt).toLocaleDateString("de-CH") : "—"}</span>
+              </div>
+              {employee.invited && (
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-blue-400 flex-shrink-0" />
+                  <span className="text-sm text-gray-700">Interview eingeladen: {employee.inviteSentAt ? new Date(employee.inviteSentAt).toLocaleDateString("de-CH") : "—"}</span>
+                </div>
+              )}
+              {employee.status === "approved" && (
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-emerald-600 flex-shrink-0" />
+                  <span className="text-sm text-gray-700">Genehmigt</span>
+                </div>
+              )}
+              {employee.status === "rejected" && (
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-red-400 flex-shrink-0" />
+                  <span className="text-sm text-gray-700">Abgelehnt</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {editAvailability && <EditModal title="Verfügbarkeit & Erfahrung" data={availabilityData} onChange={setAvailabilityData} onSave={saveAvailability} onClose={() => setEditAvailability(false)} />}
       {editLicense     && <EditModal title="Führerschein & Fahrzeug"   data={licenseData}     onChange={setLicenseData}     onSave={saveLicenseCar}  onClose={() => setEditLicense(false)} />}
       {editSkills      && <EditModal title="Schulungen & Sprachen"     data={skillsData}      onChange={setSkillsData}      onSave={saveSkills}      onClose={() => setEditSkills(false)} />}
@@ -495,7 +666,7 @@ function InfoCard({ title, children, onEdit, className = "" }) {
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
         {onEdit && (
-          <button onClick={onEdit} className="text-xs text-[#0F1F38] font-medium px-2.5 py-1 rounded-lg border border-[#0F1F38]/20 hover:bg-[#0F1F38]/5 transition">
+          <button onClick={onEdit} className="text-xs text-[#04436F] font-medium px-2.5 py-1 rounded-lg border border-[#04436F]/20 hover:bg-[#04436F]/5 transition">
             Bearbeiten
           </button>
         )}
@@ -530,7 +701,7 @@ function EditModal({ title, data, onChange, onSave, onClose }) {
               <label className="block text-xs font-medium text-gray-500 mb-1 capitalize">{key}</label>
               <input
                 name={key}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F1F38]/20"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#04436F]/20"
                 value={data[key] || ""}
                 onChange={(e) => onChange({ ...data, [key]: e.target.value })}
                 placeholder={key}
@@ -540,7 +711,7 @@ function EditModal({ title, data, onChange, onSave, onClose }) {
         </div>
         <div className="flex gap-3 px-6 py-4 border-t border-gray-100">
           <button onClick={onClose} className="flex-1 py-2 text-sm font-medium border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition">Abbrechen</button>
-          <button onClick={onSave}  className="flex-1 py-2 text-sm font-medium bg-[#0F1F38] text-white rounded-lg hover:bg-[#1a3050] transition">Speichern</button>
+          <button onClick={onSave}  className="flex-1 py-2 text-sm font-medium bg-[#04436F] text-white rounded-lg hover:bg-[#033558] transition">Speichern</button>
         </div>
       </div>
     </div>

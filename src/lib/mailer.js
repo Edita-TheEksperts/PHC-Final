@@ -123,8 +123,8 @@ export async function sendFeedbackRequestEmail({ email, firstName, lastName, car
       subject: 'Wie zufrieden sind Sie mit unserer Betreuung?',
       html: `
         <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-          <p>Hallo ${firstName} ${lastName}</p>
-          <p>Wir hoffen, dass Sie mit der Betreuung durch ${caregiverName} zufrieden waren.</p>
+          <p>Hallo ${firstName || ''} ${lastName || ''}</p>
+          <p>Wir hoffen, dass Sie mit der Betreuung durch ${caregiverName || 'Ihre Betreuungsperson'} zufrieden waren.</p>
           <p>Wir freuen uns über Ihre Rückmeldung: <a href="${feedbackLink}">${feedbackLink}</a></p>
           <p>Ihr Feedback hilft uns, unsere Dienstleistung weiter zu verbessern.</p>
           <p>Danke für Ihr Vertrauen!</p>
@@ -461,7 +461,7 @@ export function createRahmenvereinbarungPdf(employee) {
 
     doc.font("Helvetica")
       .text(
-        `${employee.firstName} ${employee.lastName}, ${employee.street || "[Strasse Nr.]"}, ${employee.zip || "[PLZ]"} ${employee.city || "[Ort]"}`,
+        `${employee.firstName} ${employee.lastName}, ${employee.address || "[Strasse]"} ${employee.houseNumber || ""}, ${employee.zipCode || "[PLZ]"} ${employee.city || "[Ort]"}`.replace(/\s+/g, " ").trim(),
         { continued: true }
       )
       .font("Helvetica-Bold")

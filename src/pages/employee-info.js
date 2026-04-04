@@ -2,25 +2,36 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import EmployeeLayout from "../components/EmployeeLayout";
 
-const fileFields = ["cvFile", "passportFile", "visaFile", "policeLetterFile", "certificateFile", "drivingLicenceFile", "profilePhoto"];
+const fileFields = ["cvFile", "profilePhoto", "passportFile", "passportBackFile", "visaFile", "drivingLicenceFile", "policeLetterFile", "certificateFile"];
 
 const hiddenFields = [
   "id", "password", "passwordHash", "salesforceId",
   "createdAt", "updatedAt", "resetToken", "resetTokenExpiry",
-  "iban", "bic", "bankName", "accountHolder",
 ];
 
 function formatLabel(key) {
   const labels = {
-    firstName: "Vorname", lastName: "Nachname", email: "E-Mail", phone: "Telefon",
-    street: "Strasse", city: "Stadt", zip: "PLZ", country: "Land",
-    birthDate: "Geburtsdatum", nationality: "Nationalität", gender: "Geschlecht",
-    maritalStatus: "Zivilstand", languages: "Sprachen", education: "Ausbildung",
-    experience: "Erfahrung", skills: "Fähigkeiten", notes: "Notizen",
-    status: "Status", role: "Rolle", ahv: "AHV-Nummer",
-    cvFile: "Lebenslauf (CV)", passportFile: "Reisepass", visaFile: "Visum",
-    policeLetterFile: "Polizeiliches Führungszeugnis", certificateFile: "Zertifikate",
-    drivingLicenceFile: "Führerschein", profilePhoto: "Profilfoto",
+    salutation: "Anrede", firstName: "Vorname", lastName: "Nachname", email: "E-Mail", phone: "Telefonnummer",
+    nationality: "Nationalität", residencePermit: "Aufenthaltsstatus", canton: "Kanton",
+    zipCode: "PLZ", city: "Ort", address: "Strasse", houseNumber: "Hausnummer", country: "Land",
+    iban: "IBAN", accountHolder: "Kontoinhaber", bankName: "Bankname", bic: "BIC / SWIFT",
+    availabilityFrom: "Verfügbar ab", availabilityDays: "Verfügbarkeitstage",
+    desiredWeeklyHours: "Gewünschte Wochenstunden", onCallAvailable: "Kurzfristige Einsätze möglich",
+    languages: "Hauptsprachen", languageOther: "Weitere Sprachen", communicationTraits: "Kommunikation",
+    hasLicense: "Führerschein vorhanden", licenseType: "Führerscheintyp",
+    hasCar: "Eigenes Auto vorhanden", carAvailableForWork: "Auto für Arbeit nutzbar",
+    howFarCanYouTravel: "Max. Einsatzdistanz",
+    bodyCareSupport: "Unterstützung bei Körperpflege", nightShifts: "Nachtdienste möglich",
+    nightShiftFrequency: "Nachtdienst-Häufigkeit", worksWithAnimals: "Arbeiten mit Tieren",
+    hasAllergies: "Allergien", dietaryExperience: "Ernährungserfahrung",
+    cvFile: "Lebenslauf", profilePhoto: "Profilfoto",
+    passportFile: "Ausweis / Pass (Vorderseite)", passportBackFile: "Ausweis / Pass (Rückseite)",
+    visaFile: "Aufenthaltsbewilligung / Visum", drivingLicenceFile: "Führerausweis",
+    policeLetterFile: "Strafregisterauszug", certificateFile: "Zertifikate",
+    experienceYears: "Erfahrung (Jahre)", experienceWhere: "Erfahrung (Wo)", experienceCompany: "Arbeitgeber",
+    servicesOffered: "Angebotene Dienste", specialTrainings: "Spezielle Schulungen",
+    smoker: "Raucher", weekendReady: "Wochenendbereitschaft", travelSupport: "Reisebegleitung",
+    status: "Status",
   };
   return labels[key] || key.replace(/([A-Z])/g, " $1").replace(/^./, s => s.toUpperCase());
 }
@@ -44,10 +55,13 @@ function formatValue(value) {
 }
 
 const BASE_GROUPS = [
-  { label: "Persönliche Daten", keys: ["firstName", "lastName", "email", "phone", "birthDate", "gender", "nationality", "maritalStatus", "ahv"] },
-  { label: "Adresse", keys: ["street", "zip", "city", "country"] },
-  { label: "Qualifikation", keys: ["languages", "education", "experience", "skills"] },
-  { label: "Dokumente", keys: ["cvFile", "passportFile", "visaFile", "policeLetterFile", "certificateFile", "drivingLicenceFile", "profilePhoto"] },
+  { label: "Persönliche Informationen", keys: ["salutation", "firstName", "lastName", "email", "phone", "nationality", "residencePermit", "canton", "zipCode", "city", "address", "houseNumber", "country"] },
+  { label: "Bankdaten", keys: ["iban", "accountHolder", "bankName", "bic"] },
+  { label: "Erreichbarkeit & Verfügbarkeit", keys: ["availabilityFrom", "availabilityDays", "desiredWeeklyHours", "onCallAvailable"] },
+  { label: "Sprachen & Kommunikation", keys: ["languages", "languageOther", "communicationTraits"] },
+  { label: "Führerschein & Mobilität", keys: ["hasLicense", "licenseType", "hasCar", "carAvailableForWork", "howFarCanYouTravel"] },
+  { label: "Einsatzrelevante Fähigkeiten", keys: ["bodyCareSupport", "nightShifts", "nightShiftFrequency", "worksWithAnimals", "hasAllergies", "dietaryExperience"] },
+  { label: "Dokumente & Nachweise", keys: ["cvFile", "profilePhoto", "passportFile", "passportBackFile", "visaFile", "drivingLicenceFile", "policeLetterFile", "certificateFile"] },
 ];
 
 export default function EmployeeInfo() {
@@ -56,7 +70,13 @@ export default function EmployeeInfo() {
   const [editMode, setEditMode] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saveMsg, setSaveMsg] = useState({ type: "", text: "" });
+  const [viewTab, setViewTab] = useState("profil");
   const router = useRouter();
+
+  useEffect(() => {
+    if (router.query.tab === "dokumente") setViewTab("dokumente");
+    else setViewTab("profil");
+  }, [router.query.tab]);
 
   useEffect(() => {
     const email = localStorage.getItem("email");
@@ -112,7 +132,7 @@ export default function EmployeeInfo() {
     <EmployeeLayout>
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
-          <div className="w-8 h-8 border-2 border-[#0F1F38] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <div className="w-8 h-8 border-2 border-[#04436F] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
           <p className="text-sm text-gray-500">Lade Informationen...</p>
         </div>
       </div>
@@ -133,12 +153,15 @@ export default function EmployeeInfo() {
   const allKeys = Object.keys(formData).filter(k => !hiddenFields.includes(k));
   const usedKeys = new Set(BASE_GROUPS.flatMap(g => g.keys));
   const sonstigesKeys = allKeys.filter(k => !usedKeys.has(k) && !fileFields.includes(k));
-  const fieldGroups = [
+  const allGroups = [
     ...BASE_GROUPS,
     ...(sonstigesKeys.length > 0 ? [{ label: "Sonstiges", keys: sonstigesKeys }] : []),
   ];
+  const fieldGroups = viewTab === "dokumente"
+    ? allGroups.filter(g => g.label === "Dokumente & Nachweise")
+    : allGroups.filter(g => g.label !== "Dokumente & Nachweise");
 
-  const inputCls = "w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0F1F38]/20 focus:border-[#0F1F38] transition";
+  const inputCls = "w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#04436F]/20 focus:border-[#04436F] transition";
 
   return (
     <EmployeeLayout>
@@ -147,18 +170,18 @@ export default function EmployeeInfo() {
         {/* Header */}
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-[#0F1F38] flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+            <div className="w-12 h-12 rounded-full bg-[#04436F] flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
               {initials}
             </div>
             <div>
-              <h1 className="text-xl font-semibold text-gray-900">Persönliche Informationen</h1>
+              <h1 className="text-xl font-semibold text-gray-900">{viewTab === "dokumente" ? "Dokumente & Nachweise" : "Persönliche Informationen"}</h1>
               <p className="text-sm text-gray-500">{employee.firstName} {employee.lastName} · {employee.email}</p>
             </div>
           </div>
           {!editMode ? (
             <button
               onClick={() => setEditMode(true)}
-              className="flex-shrink-0 px-4 py-2 bg-[#0F1F38] hover:bg-[#1a3050] text-white text-sm font-medium rounded-lg transition"
+              className="flex-shrink-0 px-4 py-2 bg-[#04436F] hover:bg-[#033558] text-white text-sm font-medium rounded-lg transition"
             >
               Bearbeiten
             </button>
@@ -166,7 +189,7 @@ export default function EmployeeInfo() {
             <div className="flex gap-2 flex-shrink-0">
               <button
                 onClick={handleSave}
-                className="px-4 py-2 bg-[#0F1F38] hover:bg-[#1a3050] text-white text-sm font-medium rounded-lg transition"
+                className="px-4 py-2 bg-[#04436F] hover:bg-[#033558] text-white text-sm font-medium rounded-lg transition"
               >
                 Speichern
               </button>
@@ -215,14 +238,14 @@ export default function EmployeeInfo() {
                         <input
                           type="file"
                           onChange={e => handleFileUpload(e.target.files[0], key)}
-                          className="w-full text-sm text-gray-600 border border-gray-200 rounded-lg px-3 py-2 file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-[#0F1F38] file:text-white hover:file:bg-[#1a3050] transition"
+                          className="w-full text-sm text-gray-600 border border-gray-200 rounded-lg px-3 py-2 file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-[#04436F] file:text-white hover:file:bg-[#033558] transition"
                         />
                       ) : value ? (
                         <a
                           href={value}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 text-sm text-[#0F1F38] underline underline-offset-2 font-medium"
+                          className="inline-flex items-center gap-1.5 text-sm text-[#04436F] underline underline-offset-2 font-medium"
                         >
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />

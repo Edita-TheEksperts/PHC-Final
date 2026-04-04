@@ -50,7 +50,7 @@ export default function EmployeesOnAssignment({ employees }) {
             placeholder="Name suchen…"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F1F38]/20"
+            className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#04436F]/20"
           />
         </div>
       </div>

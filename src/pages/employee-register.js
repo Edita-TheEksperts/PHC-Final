@@ -87,6 +87,7 @@ const scrollToTop = () => {
     availabilityFrom: typeof window !== "undefined" ? new Date().toISOString().split("T")[0] : "",
     availabilityDays: [],
     servicesOffered: [],
+    selectedSubservices: {},
     howDidYouHearAboutUs: "",
       passportFrontFile: null,
   passportBackFile: null,
@@ -317,6 +318,7 @@ newErrors.nightShifts = "Bitte auswählen, ob Feiertagseinsätze möglich sind."
     if (!form.passportFrontFile) newErrors.passportFrontFile = "Bitte Vorderseite des Passes/IDs hochladen.";
     if (!form.passportBackFile) newErrors.passportBackFile = "Bitte Rückseite des Passes/IDs hochladen.";
     if (!form.cvFile) newErrors.cvFile = "Bitte Lebenslauf hochladen.";
+    if (!form.certificateFile) newErrors.certificateFile = "Bitte Zertifikate/Arbeitszeugnisse hochladen.";
     if (form.residencePermit !== "CH Pass" && !form.workPermitFile) newErrors.workPermitFile = "Bitte Aufenthalts- oder Arbeitsbewilligung hochladen.";
     if (form.hasLicense === "ja" && !form.drivingLicenceFile) newErrors.drivingLicenceFile = "Bitte Führerschein hochladen.";
     if (form.hasLicense !== "ja") {
@@ -374,12 +376,10 @@ const handleSubmit = async (e) => {
     const fileUploads = {
   passportFrontFile: await uploadToFirebase(form.passportFrontFile, userId, "passport_front"),
   passportBackFile: await uploadToFirebase(form.passportBackFile, userId, "passport_back"),
-  visaFile: await uploadToFirebase(form.visaFile, userId, "visa"),
+  workPermitFile: await uploadToFirebase(form.workPermitFile, userId, "work_permit"),
       policeLetterFile: await uploadToFirebase(form.policeLetterFile, userId, "police_letter"),
       cvFile: await uploadToFirebase(form.cvFile, userId, "cv"),
-      certificateFile: form.certificateFile
-        ? await uploadToFirebase(form.certificateFile, userId, "certificate")
-        : null,
+      certificateFile: await uploadToFirebase(form.certificateFile, userId, "certificate"),
       drivingLicenceFile:
 form.hasLicense === "ja" && form.drivingLicenceFile
           ? await uploadToFirebase(form.drivingLicenceFile, userId, "driving_licence")
@@ -387,9 +387,16 @@ form.hasLicense === "ja" && form.drivingLicenceFile
       profilePhoto: await uploadToFirebase(form.profilePhoto, userId, "photo"),
     };
 // Combine URLs into the payload
+// Flatten servicesOffered to include both categories and individual subservices
+const flattenedServices = [
+  ...form.servicesOffered,
+  ...Object.values(form.selectedSubservices || {}).flat(),
+];
+const { selectedSubservices: _omit, ...formWithoutSubservices } = form;
 const payload = {
-  ...form,
+  ...formWithoutSubservices,
   ...fileUploads,
+  servicesOffered: flattenedServices,
   hasLicense: form.hasLicense === "ja",
   availabilityFrom: form.availabilityFrom || new Date().toISOString().split("T")[0],
   specialTrainings: Array.isArray(form.specialTrainings) ? form.specialTrainings : [],
@@ -1072,10 +1079,17 @@ Info: z.B. Wochenende Milano oder 10 Tage Kreuzfahrt
               className="flex items-center gap-3 cursor-pointer"
               onClick={() => {
                 setForm((prev) => {
-                  const updated = isSelected
+                  const wasSelected = prev.servicesOffered.includes(category);
+                  const updatedServices = wasSelected
                     ? prev.servicesOffered.filter((item) => item !== category)
                     : [...prev.servicesOffered, category];
-                  return { ...prev, servicesOffered: updated };
+                  const updatedSubs = { ...prev.selectedSubservices };
+                  if (wasSelected) {
+                    delete updatedSubs[category];
+                  } else {
+                    updatedSubs[category] = [...subservices];
+                  }
+                  return { ...prev, servicesOffered: updatedServices, selectedSubservices: updatedSubs };
                 });
               }}
             >
@@ -1122,19 +1136,46 @@ Info: z.B. Wochenende Milano oder 10 Tage Kreuzfahrt
 
           {/* Animated Subservices Section */}
 <div className="transition-all duration-500 ease-in-out max-h-[300px] opacity-100 py-4 overflow-hidden">            <div className="flex flex-wrap gap-2 px-6">
-              {subservices.map((item, idx) => (
-                <span
-                  key={idx}
-                  className={`px-3 py-1.5 rounded-full border text-sm font-medium shadow-sm transition-all cursor-pointer
-                    ${
-                      isSelected
-                        ? "bg-[#04436F] text-white border-[#04436F]"
-                        : "bg-white border-[#04436F]/20 text-[#04436F] hover:bg-[#04436F] hover:text-white"
-                    }`}
-                >
-                  {item}
-                </span>
-              ))}
+              {subservices.map((item, idx) => {
+                const isSubSelected = (form.selectedSubservices[category] || []).includes(item);
+                return (
+                  <span
+                    key={idx}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setForm((prev) => {
+                        const currentSubs = prev.selectedSubservices[category] || [];
+                        let updatedSubs;
+                        if (isSubSelected) {
+                          updatedSubs = currentSubs.filter((s) => s !== item);
+                        } else {
+                          updatedSubs = [...currentSubs, item];
+                        }
+                        const newSelectedSubservices = { ...prev.selectedSubservices };
+                        let updatedServices = [...prev.servicesOffered];
+                        if (updatedSubs.length === 0) {
+                          delete newSelectedSubservices[category];
+                          updatedServices = updatedServices.filter((s) => s !== category);
+                        } else {
+                          newSelectedSubservices[category] = updatedSubs;
+                          if (!updatedServices.includes(category)) {
+                            updatedServices.push(category);
+                          }
+                        }
+                        return { ...prev, servicesOffered: updatedServices, selectedSubservices: newSelectedSubservices };
+                      });
+                    }}
+                    className={`px-3 py-1.5 rounded-full border text-sm font-medium shadow-sm transition-all cursor-pointer
+                      ${
+                        isSubSelected
+                          ? "bg-[#04436F] text-white border-[#04436F]"
+                          : "bg-white border-[#04436F]/20 text-[#04436F] hover:bg-[#04436F] hover:text-white"
+                      }`}
+                  >
+                    {item}
+                  </span>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -1156,7 +1197,7 @@ Info: z.B. Wochenende Milano oder 10 Tage Kreuzfahrt
     { label: "Aufenthalts- oder Arbeitsbewilligung", key: "workPermitFile", required: true, hideIfCHPass: true },
     { label: "Lebenslauf", key: "cvFile", required: true },
     { label: "Strafregisterauszug", key: "policeLetterFile", required: false },
-    { label: "Zertifikate/Arbeitszeugnisse", key: "certificateFile", required: false },
+    { label: "Zertifikate/Arbeitszeugnisse", key: "certificateFile", required: true },
   ].map((field) => (
     <div
       key={field.key}
@@ -1322,9 +1363,10 @@ Info: z.B. Wochenende Milano oder 10 Tage Kreuzfahrt
   ) : (
     <button
       type="submit"
-      className="px-6 py-3 bg-[#04436F] text-white rounded-lg"
+      disabled={isSubmitted}
+      className="px-6 py-3 bg-[#04436F] text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
     >
-      Registrierung abschliessen
+      {isSubmitted ? "Wird gesendet..." : "Registrierung abschliessen"}
     </button>
   )}
 </div>
@@ -1354,7 +1396,11 @@ Info: z.B. Wochenende Milano oder 10 Tage Kreuzfahrt
             .join(", ")}
         />
         <SummaryRow label="Mobilität" value={form.howFarCanYouTravel} />
-        <SummaryRow label="Tätigkeiten" value={(form.servicesOffered || []).join(", ")} />
+        <SummaryRow label="Tätigkeiten" value={
+          Object.entries(form.selectedSubservices || {}).map(([cat, subs]) =>
+            `${cat}: ${subs.join(", ")}`
+          ).join(" | ") || (form.servicesOffered || []).join(", ")
+        } />
         <SummaryRow label="Führerschein" value={form.hasLicense === "ja" ? "Ja" : "Nein"} />
         {form.hasLicense === "ja" && (
           <>

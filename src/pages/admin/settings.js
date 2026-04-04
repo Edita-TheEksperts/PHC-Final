@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import AdminLayout from "../../components/AdminLayout";
+import EmailTemplatesAdmin from "../../components/EmailTemplatesAdmin";
+import BlogsTab from "../../components/BlogsTab";
 
 export default function SettingsPage() {
+  const [activeTab, setActiveTab] = useState("profil");
   const [admin, setAdmin] = useState({ firstName: "", lastName: "", email: "", phone: "" });
   const [pwForm, setPwForm] = useState({ current: "", next: "", confirm: "" });
   const [pwMsg, setPwMsg] = useState({ type: "", text: "" });
@@ -9,9 +12,11 @@ export default function SettingsPage() {
 
   useEffect(() => {
     async function fetchProfile() {
-      const res = await fetch("/api/admin/profile");
-      const data = await res.json();
-      setAdmin(data);
+      try {
+        const res = await fetch("/api/admin/profile");
+        const data = await res.json();
+        setAdmin(data);
+      } catch {}
     }
     fetchProfile();
   }, []);
@@ -54,16 +59,52 @@ export default function SettingsPage() {
 
   const initials = `${admin.firstName?.[0] || ""}${admin.lastName?.[0] || ""}`.toUpperCase() || "A";
 
+  // System maintenance state
+  const [sending, setSending] = useState(false);
+  const [maintMsg, setMaintMsg] = useState("");
+  const [dateStart, setDateStart] = useState("");
+  const [dateEnd, setDateEnd] = useState("");
+  const [timeStart, setTimeStart] = useState("");
+  const [timeEnd, setTimeEnd] = useState("");
+
+  async function sendMaintenance() {
+    if (!dateStart || !dateEnd || !timeStart || !timeEnd) { setMaintMsg("Bitte alle Felder ausfüllen."); return; }
+    setSending(true); setMaintMsg("");
+    try {
+      const res = await fetch("/api/admin/send-maintenance-email", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ date: `${dateStart} bis ${dateEnd}`, timeStart, timeEnd }) });
+      setMaintMsg(res.ok ? "Wartungs-Mail gesendet." : "Fehler beim Senden.");
+    } catch { setMaintMsg("Serverfehler."); } finally { setSending(false); }
+  }
+
+  const tabs = [
+    { id: "profil", label: "Profil & Zugang" },
+    { id: "email", label: "E-Mail-Vorlagen" },
+    { id: "system", label: "Systemwartung" },
+    { id: "blogs", label: "Blogs" },
+  ];
+
   return (
     <AdminLayout>
-      <div className="px-6 lg:px-8 py-6 space-y-6 max-w-2xl">
+      <div className="px-4 lg:px-8 py-6 space-y-6 max-w-4xl mx-auto">
 
         {/* Header */}
         <div>
           <h1 className="text-xl font-semibold text-gray-900">Einstellungen</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Profil und Sicherheitseinstellungen</p>
+          <p className="text-sm text-gray-500 mt-0.5">Profil, E-Mail-Vorlagen und Systemwartung</p>
         </div>
 
+        {/* Tabs */}
+        <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+          {tabs.map(t => (
+            <button key={t.id} onClick={() => setActiveTab(t.id)}
+              className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition ${activeTab === t.id ? "bg-white text-gray-900 shadow-sm" : "text-gray-600 hover:text-gray-900"}`}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Profile Tab */}
+        {activeTab === "profil" && <>
         {/* Profile card */}
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-100">
@@ -72,7 +113,7 @@ export default function SettingsPage() {
           <div className="p-6">
             {/* Avatar + name */}
             <div className="flex items-center gap-4 mb-6">
-              <div className="w-14 h-14 rounded-full bg-[#0F1F38] flex items-center justify-center text-white text-xl font-bold flex-shrink-0">
+              <div className="w-14 h-14 rounded-full bg-[#04436F] flex items-center justify-center text-white text-xl font-bold flex-shrink-0">
                 {initials}
               </div>
               <div>
@@ -126,7 +167,7 @@ export default function SettingsPage() {
                 value={pwForm.current}
                 onChange={e => setPwForm(p => ({ ...p, current: e.target.value }))}
                 placeholder="••••••••"
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0F1F38]/20 focus:border-[#0F1F38] transition"
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#04436F]/20 focus:border-[#04436F] transition"
               />
             </div>
             <div>
@@ -136,7 +177,7 @@ export default function SettingsPage() {
                 value={pwForm.next}
                 onChange={e => setPwForm(p => ({ ...p, next: e.target.value }))}
                 placeholder="••••••••"
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0F1F38]/20 focus:border-[#0F1F38] transition"
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#04436F]/20 focus:border-[#04436F] transition"
               />
             </div>
             <div>
@@ -146,7 +187,7 @@ export default function SettingsPage() {
                 value={pwForm.confirm}
                 onChange={e => setPwForm(p => ({ ...p, confirm: e.target.value }))}
                 placeholder="••••••••"
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0F1F38]/20 focus:border-[#0F1F38] transition"
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#04436F]/20 focus:border-[#04436F] transition"
               />
             </div>
 
@@ -160,13 +201,60 @@ export default function SettingsPage() {
               <button
                 type="submit"
                 disabled={pwLoading}
-                className={`px-5 py-2.5 rounded-lg text-sm font-medium text-white transition ${pwLoading ? "bg-gray-300 cursor-not-allowed" : "bg-[#0F1F38] hover:bg-[#1a3050]"}`}
+                className={`px-5 py-2.5 rounded-lg text-sm font-medium text-white transition ${pwLoading ? "bg-gray-300 cursor-not-allowed" : "bg-[#04436F] hover:bg-[#033558]"}`}
               >
                 {pwLoading ? "Wird aktualisiert..." : "Passwort aktualisieren"}
               </button>
             </div>
           </form>
         </div>
+
+        </>}
+
+        {/* Email Templates Tab */}
+        {activeTab === "email" && (
+          <EmailTemplatesAdmin />
+        )}
+
+        {/* Blogs Tab */}
+        {activeTab === "blogs" && (
+          <BlogsTab />
+        )}
+
+        {/* System Maintenance Tab */}
+        {activeTab === "system" && (
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100">
+              <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Systemwartung E-Mail</h2>
+              <p className="text-xs text-gray-500 mt-0.5">E-Mail an alle Kunden über geplante Wartungsarbeiten</p>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <label className="flex flex-col">
+                  <span className="text-xs font-medium text-gray-500 mb-1.5">Startdatum</span>
+                  <input type="date" value={dateStart} onChange={e => setDateStart(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                </label>
+                <label className="flex flex-col">
+                  <span className="text-xs font-medium text-gray-500 mb-1.5">Enddatum</span>
+                  <input type="date" value={dateEnd} onChange={e => setDateEnd(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                </label>
+                <label className="flex flex-col">
+                  <span className="text-xs font-medium text-gray-500 mb-1.5">Startzeit</span>
+                  <input type="time" value={timeStart} onChange={e => setTimeStart(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                </label>
+                <label className="flex flex-col">
+                  <span className="text-xs font-medium text-gray-500 mb-1.5">Endzeit</span>
+                  <input type="time" value={timeEnd} onChange={e => setTimeEnd(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                </label>
+              </div>
+              <button onClick={sendMaintenance} disabled={sending}
+                className={`w-full py-2.5 rounded-lg text-sm text-white font-medium transition ${sending ? "bg-gray-300 cursor-not-allowed" : "bg-[#04436F] hover:bg-[#033558]"}`}>
+                {sending ? "Wird gesendet..." : "E-Mail an alle Kunden senden"}
+              </button>
+              {maintMsg && <p className={`text-center text-sm ${maintMsg.includes("Fehler") ? "text-red-600" : "text-emerald-600"}`}>{maintMsg}</p>}
+            </div>
+          </div>
+        )}
 
       </div>
     </AdminLayout>

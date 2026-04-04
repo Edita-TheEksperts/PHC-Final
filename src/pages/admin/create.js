@@ -144,7 +144,7 @@ export default function CreateVoucher({ initialVouchers }) {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  const inputCls = "w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0F1F38]/20 focus:border-[#0F1F38] transition";
+  const inputCls = "w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#04436F]/20 focus:border-[#04436F] transition";
   const labelCls = "block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5";
 
   return (
@@ -164,7 +164,7 @@ export default function CreateVoucher({ initialVouchers }) {
               placeholder="Gutschein suchen..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0F1F38]/20 focus:border-[#0F1F38] transition"
+              className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#04436F]/20 focus:border-[#04436F] transition"
             />
           </div>
         </div>
@@ -269,7 +269,7 @@ export default function CreateVoucher({ initialVouchers }) {
                 type="checkbox"
                 checked={formData.isActive}
                 onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                className="w-4 h-4 rounded border-gray-300 accent-[#0F1F38]"
+                className="w-4 h-4 rounded border-gray-300 accent-[#04436F]"
               />
               <label htmlFor="isActive" className="text-sm text-gray-700 font-medium">Aktiv</label>
             </div>
@@ -277,7 +277,7 @@ export default function CreateVoucher({ initialVouchers }) {
             <div className="flex items-end md:col-span-1">
               <button
                 type="submit"
-                className="w-full bg-[#0F1F38] hover:bg-[#1a3050] text-white py-2.5 rounded-lg text-sm font-medium transition flex items-center justify-center gap-2"
+                className="w-full bg-[#04436F] hover:bg-[#033558] text-white py-2.5 rounded-lg text-sm font-medium transition flex items-center justify-center gap-2"
               >
                 {editing ? (
                   <><CheckCircle2 size={16} /> Aktualisieren</>
@@ -339,7 +339,7 @@ export default function CreateVoucher({ initialVouchers }) {
                           <button
                             onClick={() => handleEdit(v)}
                             title="Bearbeiten"
-                            className="p-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-[#0F1F38] hover:text-white transition"
+                            className="p-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-[#04436F] hover:text-white transition"
                           >
                             <Pencil size={14} />
                           </button>

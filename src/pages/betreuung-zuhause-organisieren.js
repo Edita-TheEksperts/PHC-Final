@@ -59,7 +59,7 @@ Registrieren Sie sich und erstellen Sie ihre eigene Offerte direkt<br></br> und 
 </p>
 <Link href="/register-client">
 
-          <button className="bg-[#04436F] text-white lg:mt-[60px] px-6 py-3 rounded-full text-[18px] font-medium mt-6 transition duration-300 hover:bg-[#6FCF97]">
+          <button className="bg-[#04436F] text-white lg:mt-[60px] px-6 py-3 rounded-full text-[18px] font-medium mt-6 transition duration-300 hover:bg-[#B99B5F]">
           Buchen Sie jetzt                   </button> </Link>
         </section>
   

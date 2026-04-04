@@ -91,7 +91,7 @@ Freundliche Grüsse
     }
   }
 
-  const inputCls = "w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0F1F38]/20 focus:border-[#0F1F38] transition";
+  const inputCls = "w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#04436F]/20 focus:border-[#04436F] transition";
   const labelCls = "block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5";
 
   return (
@@ -153,7 +153,7 @@ Freundliche Grüsse
               onClick={sendFeedbackEmail}
               disabled={sending || clients.length === 0}
               className={`w-full py-2.5 rounded-lg text-sm text-white font-medium transition ${
-                sending || clients.length === 0 ? "bg-gray-300 cursor-not-allowed" : "bg-[#0F1F38] hover:bg-[#1a3050]"
+                sending || clients.length === 0 ? "bg-gray-300 cursor-not-allowed" : "bg-[#04436F] hover:bg-[#033558]"
               }`}
             >
               {sending ? "Sende E-Mail..." : `Feedback-E-Mail an alle ${clients.length} Kunden senden`}

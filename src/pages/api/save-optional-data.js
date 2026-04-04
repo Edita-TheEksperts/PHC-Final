@@ -237,16 +237,17 @@ export default async function handler(req, res) {
     }
   }
 
-  // Send welcome email once at step 4 completion
+  // Send welcome email once at step 4 completion (prevent duplicates via welcomeEmailSent flag)
   try {
-    const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true, firstName: true, lastName: true } });
-    if (user?.email) {
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true, firstName: true, lastName: true, welcomeEmailSent: true } });
+    if (user?.email && !user.welcomeEmailSent) {
       await sendClientWelcomeEmail({
         email: user.email,
         firstName: user.firstName ?? "",
         lastName: user.lastName ?? "",
         passwordLink: `${process.env.NEXT_PUBLIC_BASE_URL}/forgot-password`,
       });
+      await prisma.user.update({ where: { id: userId }, data: { welcomeEmailSent: true } });
     }
   } catch (_) {}
 

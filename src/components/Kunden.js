@@ -40,9 +40,11 @@ export default function AdminKundenPage() {
 
   useEffect(() => {
     async function fetchServices() {
-      const res = await fetch("/api/admin/services");
-      const data = await res.json();
-      setAllServices(Array.isArray(data) ? data : []);
+      try {
+        const res = await fetch("/api/admin/services");
+        const data = await res.json();
+        setAllServices(Array.isArray(data) ? data : []);
+      } catch { setAllServices([]); }
     }
     fetchServices();
   }, []);
@@ -60,14 +62,16 @@ export default function AdminKundenPage() {
   }, []);
 
   async function saveEditedSchedule() {
-    const res = await fetch(`/api/admin/schedules/${editSchedule.id}/edit`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(editSchedule),
-    });
-    const newSchedule = await res.json();
-    setSchedules(prev => [newSchedule, ...prev.map(s => s.id === editSchedule.id ? { ...s, status: "cancelled" } : s)]);
-    setEditSchedule(null);
+    try {
+      const res = await fetch(`/api/admin/schedules/${editSchedule.id}/edit`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editSchedule),
+      });
+      const newSchedule = await res.json();
+      setSchedules(prev => [newSchedule, ...prev.map(s => s.id === editSchedule.id ? { ...s, status: "cancelled" } : s)]);
+      setEditSchedule(null);
+    } catch { alert("Fehler beim Speichern."); }
   }
 
   async function handleCancelWithEmail(schedule, cancelledBy) {
@@ -99,12 +103,50 @@ export default function AdminKundenPage() {
     { id: "nextMonth", label: "Nächsten Monat" },
   ];
 
+  // Alert tile calculations
+  const now = new Date();
+  const fiveDays = new Date(now); fiveDays.setDate(fiveDays.getDate() + 5);
+  const thirtyDaysAgo = new Date(now); thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  const kundenOhneZuweisung = clients.filter(c => !c.assignments || c.assignments.length === 0 || !c.assignments.some(a => a.employee)).length;
+  const kundenMitOffenemVorschlag = clients.filter(c => c.assignments?.some(a => a.status === "pending")).length;
+  const einsaetzeIn5Tagen = schedules.filter(s => {
+    if (!s.date) return false;
+    const d = new Date(s.date);
+    return d >= now && d <= fiveDays && s.status !== "cancelled";
+  }).length;
+  const stornierungen30Tage = schedules.filter(s => {
+    if (s.status !== "cancelled") return false;
+    const d = new Date(s.date);
+    return d >= thirtyDaysAgo;
+  }).length;
+
   return (
     <div className="px-6 lg:px-8 py-6 space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-xl font-semibold text-gray-900">Kunden Verwaltung</h1>
         <p className="text-sm text-gray-500 mt-0.5">Übersicht über Kunden, Urlaubsanfragen, Buchungen und Aktivitäten</p>
+      </div>
+
+      {/* Alert Tiles */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className={`rounded-xl border p-4 ${kundenOhneZuweisung > 0 ? "border-red-200 bg-red-50" : "border-gray-200 bg-white"}`}>
+          <p className={`text-2xl font-bold ${kundenOhneZuweisung > 0 ? "text-red-700" : "text-gray-900"}`}>{kundenOhneZuweisung}</p>
+          <p className="text-xs text-gray-500 mt-0.5">Kunden ohne Zuweisung</p>
+        </div>
+        <div className={`rounded-xl border p-4 ${kundenMitOffenemVorschlag > 0 ? "border-amber-200 bg-amber-50" : "border-gray-200 bg-white"}`}>
+          <p className={`text-2xl font-bold ${kundenMitOffenemVorschlag > 0 ? "text-amber-700" : "text-gray-900"}`}>{kundenMitOffenemVorschlag}</p>
+          <p className="text-xs text-gray-500 mt-0.5">Mit offenem Vorschlag</p>
+        </div>
+        <div className={`rounded-xl border p-4 ${einsaetzeIn5Tagen > 0 ? "border-blue-200 bg-blue-50" : "border-gray-200 bg-white"}`}>
+          <p className={`text-2xl font-bold ${einsaetzeIn5Tagen > 0 ? "text-blue-700" : "text-gray-900"}`}>{einsaetzeIn5Tagen}</p>
+          <p className="text-xs text-gray-500 mt-0.5">Einsätze in 5 Tagen</p>
+        </div>
+        <div className={`rounded-xl border p-4 ${stornierungen30Tage > 0 ? "border-orange-200 bg-orange-50" : "border-gray-200 bg-white"}`}>
+          <p className={`text-2xl font-bold ${stornierungen30Tage > 0 ? "text-orange-700" : "text-gray-900"}`}>{stornierungen30Tage}</p>
+          <p className="text-xs text-gray-500 mt-0.5">Stornierungen (30 Tage)</p>
+        </div>
       </div>
 
       {/* Top grid */}
@@ -159,7 +201,7 @@ export default function AdminKundenPage() {
                 key={id}
                 onClick={() => setFilter(id)}
                 className={`px-3 py-1.5 rounded-full text-xs font-medium border transition
-                  ${filter === id ? "bg-[#0F1F38] text-white border-[#0F1F38]" : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"}`}
+                  ${filter === id ? "bg-[#04436F] text-white border-[#04436F]" : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"}`}
               >
                 {label}
               </button>
@@ -170,15 +212,27 @@ export default function AdminKundenPage() {
               {filteredSchedules.slice(0, 20).map((s) => (
                 <li key={s.id} className="p-3 bg-gray-50 rounded-lg border border-gray-100 hover:border-gray-200 transition flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <div className="flex-1">
-                    <p onClick={() => window.open(`/admin/clients/${s.user?.id}`, "_blank")} className="font-medium text-gray-900 text-sm hover:text-[#0F1F38] hover:underline cursor-pointer">
+                    <p onClick={() => window.open(`/admin/clients/${s.user?.id}`, "_blank")} className="font-medium text-gray-900 text-sm hover:text-[#04436F] hover:underline cursor-pointer">
                       {s.user ? `${s.user.firstName} ${s.user.lastName}` : "— Kein Kunde —"}
                     </p>
                     <p className="text-xs text-gray-500 mt-0.5">
                       {s.serviceName || s.subServiceName || "Service"} · {s.date ? new Date(s.date).toLocaleDateString("de-DE") : `${s.day || ""} ${s.startTime || ""}`}
                     </p>
-                    {s.employee && <p className="text-xs text-gray-400 mt-0.5">{s.employee.firstName} {s.employee.lastName}</p>}
+                    {s.employee ? (
+                      <p className="text-xs text-emerald-600 mt-0.5">{s.employee.firstName} {s.employee.lastName}</p>
+                    ) : (
+                      <p className="text-xs text-red-500 mt-0.5 font-medium">Kein Mitarbeiter zugewiesen</p>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
+                    {!s.employee && s.user?.id && (
+                      <button
+                        onClick={() => window.open(`/admin/clients/${s.user.id}`, "_blank")}
+                        className="px-2.5 py-1 text-xs bg-[#04436F] text-white rounded-md font-medium hover:bg-[#033558] transition"
+                      >
+                        Mitarbeiter vorschlagen
+                      </button>
+                    )}
                     <span className={`px-2 py-0.5 text-xs rounded-full border font-medium
                       ${s.status === "active" ? "bg-blue-50 text-blue-700 border-blue-200"
                         : s.status === "completed" ? "bg-emerald-50 text-emerald-700 border-emerald-200"
@@ -213,7 +267,7 @@ export default function AdminKundenPage() {
             <p className="text-sm text-gray-600 mb-5">Möchten Sie diesen Termin stornieren oder einen neuen Termin erstellen?</p>
             <div className="flex gap-3">
               <button className="flex-1 px-4 py-2 text-sm bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 transition" onClick={() => { setCancelQuestion(selectedSchedule); setSelectedSchedule(null); }}>Stornieren</button>
-              <button className="flex-1 px-4 py-2 text-sm bg-[#0F1F38] text-white rounded-lg hover:bg-[#1a3050] transition" onClick={() => { setSelectedSchedule(null); setEditSchedule({ ...selectedSchedule, createNew: true }); }}>Neu erstellen</button>
+              <button className="flex-1 px-4 py-2 text-sm bg-[#04436F] text-white rounded-lg hover:bg-[#033558] transition" onClick={() => { setSelectedSchedule(null); setEditSchedule({ ...selectedSchedule, createNew: true }); }}>Neu erstellen</button>
             </div>
             <button className="mt-3 w-full py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-100 transition" onClick={() => setSelectedSchedule(null)}>Abbrechen</button>
           </div>
@@ -240,7 +294,7 @@ export default function AdminKundenPage() {
             </div>
             <div className="flex gap-3 mt-5">
               <button onClick={() => setEditSchedule(null)} className="flex-1 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-100 transition">Abbrechen</button>
-              <button onClick={saveEditedSchedule} className="flex-1 py-2 text-sm bg-[#0F1F38] text-white rounded-lg hover:bg-[#1a3050] transition">Speichern</button>
+              <button onClick={saveEditedSchedule} className="flex-1 py-2 text-sm bg-[#04436F] text-white rounded-lg hover:bg-[#033558] transition">Speichern</button>
             </div>
           </div>
         </div>
@@ -253,8 +307,8 @@ export default function AdminKundenPage() {
             <h3 className="text-base font-semibold text-gray-900 mb-2">Wer storniert diesen Termin?</h3>
             <p className="text-sm text-gray-600 mb-5">Bitte wählen Sie, wer die Stornierung durchführt.</p>
             <div className="flex gap-3">
-              <button className="flex-1 py-2 text-sm bg-[#0F1F38] text-white rounded-lg hover:bg-[#1a3050] transition" onClick={() => handleCancelWithEmail(cancelQuestion, "kunde")}>Kunde</button>
-              <button className="flex-1 py-2 text-sm bg-[#0F1F38] text-white rounded-lg hover:bg-[#1a3050] transition" onClick={() => handleCancelWithEmail(cancelQuestion, "employee")}>Mitarbeiter</button>
+              <button className="flex-1 py-2 text-sm bg-[#04436F] text-white rounded-lg hover:bg-[#033558] transition" onClick={() => handleCancelWithEmail(cancelQuestion, "kunde")}>Kunde</button>
+              <button className="flex-1 py-2 text-sm bg-[#04436F] text-white rounded-lg hover:bg-[#033558] transition" onClick={() => handleCancelWithEmail(cancelQuestion, "employee")}>Mitarbeiter</button>
             </div>
             <button className="mt-3 w-full py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-100 transition" onClick={() => setCancelQuestion(null)}>Abbrechen</button>
           </div>

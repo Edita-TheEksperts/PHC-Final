@@ -92,18 +92,25 @@ export default function ActiveClients({ clients }) {
                       <p className="text-base font-semibold text-gray-800">
                         {client.firstName || "—"} {client.lastName || ""}
                       </p>
-                      <p className="text-sm text-gray-500">
-                        Zuweisungen: {client.assignments?.length || 0}
+                      <p className="text-xs text-gray-500">
+                        {client.firstDate ? `Nächster Einsatz: ${new Date(client.firstDate).toLocaleDateString("de-CH")}` : "Kein Einsatz geplant"}
                       </p>
                     </div>
                   </div>
 
-                  {/* Status badge */}
-                  {isTerminated && (
-                    <span className="px-3 py-1 text-xs font-semibold rounded-full bg-red-600 text-white">
-                      Gekündigt
-                    </span>
-                  )}
+                  {/* Zuweisungsstatus */}
+                  <div className="flex items-center gap-2">
+                    {(() => {
+                      const assignments = client.assignments || [];
+                      const hasEmployee = assignments.some(a => a.employee);
+                      const hasPending = assignments.some(a => a.status === "pending" || a.confirmationStatus === "pending");
+                      if (isTerminated) return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-red-600 text-white">Gekündigt</span>;
+                      if (hasEmployee) return <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">Zugewiesen</span>;
+                      if (hasPending) return <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-amber-50 text-amber-700 border border-amber-200">Vorschlag offen</span>;
+                      return <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-red-50 text-red-700 border border-red-200">Kein Mitarbeiter</span>;
+                    })()
+                    }
+                  </div>
                 </div>
               );
             })

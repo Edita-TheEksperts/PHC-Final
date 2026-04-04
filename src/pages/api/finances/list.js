@@ -72,6 +72,7 @@ results.push({
 
     res.json(results);
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    console.error("[finances/list]", err?.message || err);
+    res.status(500).json({ message: err?.message || "Server error" });
   }
 }

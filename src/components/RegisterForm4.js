@@ -2,6 +2,7 @@
 import { useState } from "react";
 
 export default function RegisterForm4({ onComplete }) {
+  const [submitting, setSubmitting] = useState(false);
    const [form, setForm] = useState({
     mobility: [],
     transport: [],
@@ -30,10 +31,13 @@ export default function RegisterForm4({ onComplete }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (submitting) return;
+    setSubmitting(true);
     const token = localStorage.getItem("userToken");
 
     if (!token) {
       alert("Token fehlt.");
+      setSubmitting(false);
       return;
     }
 
@@ -66,6 +70,8 @@ export default function RegisterForm4({ onComplete }) {
       }
     } catch (err) {
       alert("Netzwerkfehler – bitte versuche es erneut.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -201,8 +207,8 @@ export default function RegisterForm4({ onComplete }) {
           ></textarea>
         </div>
 
-        <button type="submit" className="bg-[#04436F] text-white px-6 py-3 rounded w-full">
-          Speichern & Fortfahren
+        <button type="submit" disabled={submitting} className="bg-[#04436F] text-white px-6 py-3 rounded w-full disabled:opacity-50 disabled:cursor-not-allowed">
+          {submitting ? "Wird gespeichert..." : "Speichern & Fortfahren"}
         </button>
       </form>
     </div>

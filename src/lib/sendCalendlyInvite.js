@@ -13,7 +13,7 @@ export async function sendCalendlyInvite(email, firstName = "") {
   const calendlyLink = "https://calendly.com/primehomecare";
 
   await transporter.sendMail({
-    from: '"Prime Home Care AG" <info@primehomecare.ch>',
+    from: `"Prime Home Care AG" <${process.env.SMTP_USER}>`,
     to: email,
     subject: "Vereinbaren Sie Ihr Interview",
     html: `

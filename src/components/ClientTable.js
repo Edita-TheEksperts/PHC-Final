@@ -38,7 +38,7 @@ export default function ClientTable({ clients }) {
       try {
         const res  = await fetch("/api/admin/employees");
         const data = await res.json();
-        setEmployees(data);
+        setEmployees(Array.isArray(data) ? data : []);
       } catch {}
     }
     fetchEmployees();
@@ -77,10 +77,12 @@ export default function ClientTable({ clients }) {
   async function handleAssign(userId) {
     const employeeId = selectedEmployee[userId];
     if (!employeeId) return;
-    const res  = await fetch("/api/admin/assign-employee", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId, employeeId }) });
-    const data = await res.json();
-    if (res.ok) { setAssignedMap({ ...assignedMap, [userId]: employeeId }); setMessage("Mitarbeiter zugewiesen."); }
-    else setMessage(`Fehler: ${data.message}`);
+    try {
+      const res  = await fetch("/api/admin/assign-employee", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId, employeeId }) });
+      const data = await res.json();
+      if (res.ok) { setAssignedMap({ ...assignedMap, [userId]: employeeId }); setMessage("Mitarbeiter zugewiesen."); }
+      else setMessage(`Fehler: ${data.message}`);
+    } catch { setMessage("Fehler bei der Zuweisung."); }
     setTimeout(() => setMessage(""), 3000);
   }
 
@@ -115,7 +117,7 @@ export default function ClientTable({ clients }) {
         <select
           value={selectedEmployee[client.id] || ""}
           onChange={(e) => setSelectedEmployee({ ...selectedEmployee, [client.id]: e.target.value })}
-          className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#0F1F38]/20"
+          className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#04436F]/20"
         >
           <option value="">Mitarbeiter auswählen</option>
           {recs.filter(r => r.score >= 80).length > 0 && <optgroup label="⭐ Super Match (80–100%)">{recs.filter(r => r.score >= 80).map(rec => { const emp = acceptedEmployees.find(e => e.id === rec.employeeId); return emp ? <option key={rec.employeeId} value={rec.employeeId}>⭐ {emp.firstName} {emp.lastName} — {rec.score}%</option> : null; })}</optgroup>}
@@ -157,7 +159,7 @@ export default function ClientTable({ clients }) {
               placeholder="Suchen…"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F1F38]/20"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#04436F]/20"
             />
           </div>
           <div className="min-w-40">
@@ -165,7 +167,7 @@ export default function ClientTable({ clients }) {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F1F38]/20"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#04436F]/20"
             >
               <option value="name">Nach Name</option>
               <option value="date">Nach Datum</option>
@@ -212,7 +214,7 @@ export default function ClientTable({ clients }) {
                   <div className="flex flex-col gap-1.5">
                     <button
                       onClick={() => router.push(`/admin/clients/${client.id}`)}
-                      className="px-3 py-1.5 text-xs font-medium bg-[#0F1F38] text-white rounded-lg hover:bg-[#1a3050] transition whitespace-nowrap"
+                      className="px-3 py-1.5 text-xs font-medium bg-[#04436F] text-white rounded-lg hover:bg-[#033558] transition whitespace-nowrap"
                     >
                       Details
                     </button>
@@ -253,7 +255,7 @@ export default function ClientTable({ clients }) {
             </div>
             <AssignCell client={client} />
             <div className="flex gap-2 pt-1">
-              <button onClick={() => router.push(`/admin/clients/${client.id}`)} className="flex-1 px-3 py-2 text-xs font-medium bg-[#0F1F38] text-white rounded-lg">Details</button>
+              <button onClick={() => router.push(`/admin/clients/${client.id}`)} className="flex-1 px-3 py-2 text-xs font-medium bg-[#04436F] text-white rounded-lg">Details</button>
               {getStatus(client) === "Open" && (
                 <button onClick={() => handleCancel(client.id)} disabled={!isCancelable(client)} className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg ${isCancelable(client) ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-400 cursor-not-allowed"}`}>Stornieren</button>
               )}
@@ -279,7 +281,7 @@ export default function ClientTable({ clients }) {
                 </li>
               ))}
             </ul>
-            <button onClick={() => setShowModal(false)} className="mt-4 w-full px-4 py-2 bg-[#0F1F38] text-white text-sm font-medium rounded-lg hover:bg-[#1a3050] transition">
+            <button onClick={() => setShowModal(false)} className="mt-4 w-full px-4 py-2 bg-[#04436F] text-white text-sm font-medium rounded-lg hover:bg-[#033558] transition">
               Schliessen
             </button>
           </div>

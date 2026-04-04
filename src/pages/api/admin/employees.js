@@ -19,7 +19,10 @@ export default async function handler(req, res) {
         status: true,
         invited: true,
         createdAt: true,
-         documentStatus: true,
+        documentStatus: true,
+        city: true,
+        canton: true,
+        servicesOffered: true,
       },
       orderBy: { createdAt: "desc" },
     });

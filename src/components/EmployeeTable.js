@@ -66,7 +66,7 @@ export default function EmployeeTable({ employees, onApprove, onReject, onInvite
               placeholder="Vor- oder Nachname…"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F1F38]/20"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#04436F]/20"
             />
           </div>
           <div className="min-w-36">
@@ -74,7 +74,7 @@ export default function EmployeeTable({ employees, onApprove, onReject, onInvite
             <select
               value={inviteFilter}
               onChange={(e) => setInviteFilter(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F1F38]/20"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#04436F]/20"
             >
               <option value="">Alle</option>
               <option value="invited">Eingeladen</option>
@@ -86,7 +86,7 @@ export default function EmployeeTable({ employees, onApprove, onReject, onInvite
             <select
               value={sortOrder}
               onChange={(e) => setSortOrder(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F1F38]/20"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#04436F]/20"
             >
               <option value="">Standard</option>
               <option value="newest">Neueste zuerst</option>
@@ -134,7 +134,7 @@ export default function EmployeeTable({ employees, onApprove, onReject, onInvite
                   <div className="flex flex-wrap gap-1.5">
                     <button
                       onClick={() => router.push(`/admin/employees/${emp.id}`)}
-                      className="px-2.5 py-1 text-xs font-medium bg-[#0F1F38] text-white rounded-lg hover:bg-[#1a3050] transition"
+                      className="px-2.5 py-1 text-xs font-medium bg-[#04436F] text-white rounded-lg hover:bg-[#033558] transition"
                     >
                       Details
                     </button>
@@ -189,7 +189,7 @@ export default function EmployeeTable({ employees, onApprove, onReject, onInvite
               <span>Erstellt: {formatDate(emp.createdAt)}</span>
             </div>
             <div className="flex flex-wrap gap-2 pt-1">
-              <button onClick={() => router.push(`/admin/employees/${emp.id}`)} className="flex-1 px-3 py-2 text-xs font-medium bg-[#0F1F38] text-white rounded-lg">Details</button>
+              <button onClick={() => router.push(`/admin/employees/${emp.id}`)} className="flex-1 px-3 py-2 text-xs font-medium bg-[#04436F] text-white rounded-lg">Details</button>
               <button onClick={() => handleSendDocument(emp, "Auflösungschreiben")} className="flex-1 px-3 py-2 text-xs font-medium bg-amber-100 text-amber-700 rounded-lg">Auflösung</button>
               <button onClick={() => handleSendDocument(emp, "KündigungMA")} className="flex-1 px-3 py-2 text-xs font-medium bg-orange-100 text-orange-700 rounded-lg">Kündigung MA</button>
               <button onClick={() => handleSendDocument(emp, "KündigungMAFristlos")} className="flex-1 px-3 py-2 text-xs font-medium bg-red-100 text-red-700 rounded-lg">Fristlos</button>

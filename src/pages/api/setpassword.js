@@ -19,6 +19,10 @@ export default async function handler(req, res) {
     return res.status(400).json({ message: "Bitte geben Sie ein Passwort ein." });
   }
 
+  if (password.length < 8 || !/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/\d/.test(password) || !/[^A-Za-z0-9]/.test(password)) {
+    return res.status(400).json({ message: "Passwort muss mindestens 8 Zeichen, Gross-/Kleinbuchstaben, eine Zahl und ein Sonderzeichen enthalten." });
+  }
+
   try {
 
     const user = await prisma.user.findFirst({

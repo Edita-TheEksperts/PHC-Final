@@ -3,6 +3,9 @@ import { useEffect, useState } from "react";
 export default function FinanzenPage() {
   const [payments, setPayments] = useState([]);
   const [vouchers, setVouchers] = useState([]);
+  const [showVoucherForm, setShowVoucherForm] = useState(false);
+  const [voucherForm, setVoucherForm] = useState({ code: "", discountType: "percent", discountValue: "", maxUses: 100, validFrom: new Date().toISOString().slice(0, 10), validUntil: "2026-12-31", isActive: true });
+  const [voucherSaving, setVoucherSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [voucherFilter, setVoucherFilter] = useState("all");
   const [voucherDateFrom, setVoucherDateFrom] = useState("");
@@ -32,6 +35,21 @@ export default function FinanzenPage() {
     };
     load();
   }, []);
+
+  async function handleCreateVoucher(e) {
+    e.preventDefault();
+    setVoucherSaving(true);
+    try {
+      const res = await fetch("/api/admin/vouchers", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(voucherForm) });
+      if (res.ok) {
+        const voucherRes = await fetch("/api/finances/vouchers");
+        const voucherJson = await voucherRes.json();
+        setVouchers(voucherJson.vouchers || []);
+        setVoucherForm({ code: "", discountType: "percent", discountValue: "", maxUses: 100, validFrom: new Date().toISOString().slice(0, 10), validUntil: "2026-12-31", isActive: true });
+        setShowVoucherForm(false);
+      } else { const d = await res.json(); alert("Fehler: " + (d.error || "Gutschein konnte nicht erstellt werden.")); }
+    } catch { alert("Serverfehler."); } finally { setVoucherSaving(false); }
+  }
 
   if (loading) return (
     <div className="px-6 py-6 space-y-4">
@@ -89,8 +107,16 @@ export default function FinanzenPage() {
 
   const safePayments = Array.isArray(payments) ? payments : [];
   const bezahlt = filterPaymentsByDate(safePayments.filter((p) => p.status === "bezahlt" || p.status === "manuell"));
-  const offen = filterPaymentsByDate(safePayments.filter((p) => p.status === "offen"));
-  const fehler = filterPaymentsByDate(safePayments.filter((p) => p.status === "fehler"));
+  const inBearbeitung = filterPaymentsByDate(safePayments.filter((p) => p.status === "in_bearbeitung" || p.stripeStatus === "processing" || p.stripeStatus === "requires_capture"));
+  const offen = filterPaymentsByDate(safePayments.filter((p) => p.status === "offen" && p.stripeStatus !== "processing" && p.stripeStatus !== "requires_capture"));
+  const fehler = filterPaymentsByDate(safePayments.filter((p) => p.status === "fehler" && p.stripeStatus !== "canceled"));
+  const storniert = filterPaymentsByDate(safePayments.filter((p) => p.status === "storniert" || p.stripeStatus === "canceled"));
+  // Überfällig: offen payments older than 14 days
+  const ueberfaellig = offen.filter((p) => {
+    if (!p.paymentDate) return false;
+    const age = Math.floor((Date.now() - new Date(p.paymentDate).getTime()) / 86400000);
+    return age > 14;
+  });
 
   const totalBezahlt = bezahlt.reduce((sum, p) => sum + p.amount, 0);
   const totalOffen = offen.reduce((sum, p) => sum + p.amount, 0);
@@ -167,7 +193,7 @@ export default function FinanzenPage() {
           {isPaid && !manualPaid && <p className="mt-4 text-emerald-600 text-sm font-medium">Zahlung automatisch bezahlt</p>}
           {manualPaid && <p className="mt-4 text-emerald-600 text-sm font-medium">Zahlung manuell bezahlt</p>}
           {!isPaid && !manualPaid && (isOpen || isFailed) && (
-            <button onClick={handleManualPay} className="mt-4 w-full bg-[#0F1F38] hover:bg-[#1a3050] text-white font-medium py-2 px-4 rounded-lg text-sm transition">
+            <button onClick={handleManualPay} className="mt-4 w-full bg-[#04436F] hover:bg-[#033558] text-white font-medium py-2 px-4 rounded-lg text-sm transition">
               Manuell bezahlt markieren
             </button>
           )}
@@ -223,19 +249,37 @@ export default function FinanzenPage() {
         </div>
       </div>
 
-      {/* Payment summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl border border-l-4 border-l-emerald-400 border-gray-200 p-5">
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Total Bezahlt</p>
-          <p className="text-xl font-bold text-emerald-700">CHF {totalBezahlt.toFixed(2)}</p>
+      {/* Payment summary — 6 statuses */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="bg-white rounded-xl border border-l-4 border-l-emerald-400 border-gray-200 p-4">
+          <p className="text-xs text-gray-500 mb-1">Bezahlt</p>
+          <p className="text-lg font-bold text-emerald-700">CHF {totalBezahlt.toFixed(2)}</p>
+          <p className="text-xs text-gray-400">{bezahlt.length} Zahlungen</p>
         </div>
-        <div className="bg-white rounded-xl border border-l-4 border-l-amber-400 border-gray-200 p-5">
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Total Ausstehend</p>
-          <p className="text-xl font-bold text-amber-700">CHF {totalOffen.toFixed(2)}</p>
+        <div className="bg-white rounded-xl border border-l-4 border-l-amber-400 border-gray-200 p-4">
+          <p className="text-xs text-gray-500 mb-1">Offen</p>
+          <p className="text-lg font-bold text-amber-700">CHF {totalOffen.toFixed(2)}</p>
+          <p className="text-xs text-gray-400">{offen.length} Zahlungen</p>
         </div>
-        <div className="bg-white rounded-xl border border-l-4 border-l-red-400 border-gray-200 p-5">
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Total Fehlgeschlagen</p>
-          <p className="text-xl font-bold text-red-700">CHF {totalFehler.toFixed(2)}</p>
+        <div className="bg-white rounded-xl border border-l-4 border-l-blue-400 border-gray-200 p-4">
+          <p className="text-xs text-gray-500 mb-1">In Bearbeitung</p>
+          <p className="text-lg font-bold text-blue-700">{inBearbeitung.length}</p>
+          <p className="text-xs text-gray-400">Zahlungen</p>
+        </div>
+        <div className="bg-white rounded-xl border border-l-4 border-l-red-400 border-gray-200 p-4">
+          <p className="text-xs text-gray-500 mb-1">Fehlgeschlagen</p>
+          <p className="text-lg font-bold text-red-700">CHF {totalFehler.toFixed(2)}</p>
+          <p className="text-xs text-gray-400">{fehler.length} Zahlungen</p>
+        </div>
+        <div className="bg-white rounded-xl border border-l-4 border-l-gray-400 border-gray-200 p-4">
+          <p className="text-xs text-gray-500 mb-1">Storniert</p>
+          <p className="text-lg font-bold text-gray-700">{storniert.length}</p>
+          <p className="text-xs text-gray-400">Zahlungen</p>
+        </div>
+        <div className="bg-white rounded-xl border border-l-4 border-l-orange-400 border-gray-200 p-4">
+          <p className="text-xs text-gray-500 mb-1">Überfällig</p>
+          <p className="text-lg font-bold text-orange-700">{ueberfaellig.length}</p>
+          <p className="text-xs text-gray-400">{"> "}14 Tage offen</p>
         </div>
       </div>
 
@@ -246,7 +290,7 @@ export default function FinanzenPage() {
             key={btn.id}
             onClick={() => setFilter(btn.id)}
             className={`px-3 py-1.5 rounded-full text-xs font-medium border transition
-              ${filter === btn.id ? "bg-[#0F1F38] text-white border-[#0F1F38]" : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"}`}
+              ${filter === btn.id ? "bg-[#04436F] text-white border-[#04436F]" : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"}`}
           >
             {btn.label}
           </button>
@@ -301,9 +345,32 @@ export default function FinanzenPage() {
 
         {/* Gutscheine */}
         <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-4">Gutscheine</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Gutscheine</h2>
+            <button onClick={() => setShowVoucherForm(!showVoucherForm)} className="px-3 py-1.5 text-xs font-medium bg-[#04436F] text-white rounded-lg hover:bg-[#033558] transition">
+              {showVoucherForm ? "Abbrechen" : "+ Erstellen"}
+            </button>
+          </div>
+          {showVoucherForm && (
+            <form onSubmit={handleCreateVoucher} className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <input type="text" placeholder="Code (z.B. WELCOME10)" value={voucherForm.code} onChange={e => setVoucherForm(p => ({...p, code: e.target.value}))} className="px-3 py-2 border border-gray-200 rounded-lg text-sm" required />
+                <select value={voucherForm.discountType} onChange={e => setVoucherForm(p => ({...p, discountType: e.target.value}))} className="px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                  <option value="percent">Prozent (%)</option>
+                  <option value="fixed">Fixbetrag (CHF)</option>
+                </select>
+                <input type="number" placeholder="Wert" value={voucherForm.discountValue} onChange={e => setVoucherForm(p => ({...p, discountValue: e.target.value}))} className="px-3 py-2 border border-gray-200 rounded-lg text-sm" required />
+                <input type="number" placeholder="Max. Verwendung" value={voucherForm.maxUses} onChange={e => setVoucherForm(p => ({...p, maxUses: e.target.value}))} className="px-3 py-2 border border-gray-200 rounded-lg text-sm" />
+                <input type="date" value={voucherForm.validFrom} onChange={e => setVoucherForm(p => ({...p, validFrom: e.target.value}))} className="px-3 py-2 border border-gray-200 rounded-lg text-sm" />
+                <input type="date" value={voucherForm.validUntil} onChange={e => setVoucherForm(p => ({...p, validUntil: e.target.value}))} className="px-3 py-2 border border-gray-200 rounded-lg text-sm" />
+              </div>
+              <button type="submit" disabled={voucherSaving} className="w-full py-2 bg-[#04436F] text-white text-sm font-medium rounded-lg hover:bg-[#033558] transition disabled:opacity-50">
+                {voucherSaving ? "Wird erstellt..." : "Gutschein erstellen"}
+              </button>
+            </form>
+          )}
           <div className="flex flex-wrap gap-2 mb-4">
-            <select value={voucherFilter} onChange={(e) => setVoucherFilter(e.target.value)} className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#0F1F38]/20">
+            <select value={voucherFilter} onChange={(e) => setVoucherFilter(e.target.value)} className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#04436F]/20">
               <option value="all">Alle Zeiten</option>
               <option value="today">Heute</option>
               <option value="week">Diese Woche</option>
@@ -325,8 +392,13 @@ export default function FinanzenPage() {
                 <div key={v.id} className="p-3 border border-gray-100 bg-gray-50 rounded-lg">
                   <div className="flex justify-between items-center mb-2">
                     <span className="font-mono text-sm font-semibold text-gray-900">{v.code}</span>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${v.isActive ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-red-50 text-red-700 border-red-200"}`}>
-                      {v.isActive ? "Aktiv" : "Inaktiv"}
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${
+                      !v.isActive ? "bg-gray-50 text-gray-600 border-gray-200"
+                      : v.usedCount >= v.maxUses ? "bg-blue-50 text-blue-700 border-blue-200"
+                      : new Date(v.validUntil) < new Date() ? "bg-orange-50 text-orange-700 border-orange-200"
+                      : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                    }`}>
+                      {!v.isActive ? "Deaktiviert" : v.usedCount >= v.maxUses ? "Genutzt" : new Date(v.validUntil) < new Date() ? "Abgelaufen" : "Aktiv"}
                     </span>
                   </div>
                   <div className="grid grid-cols-2 gap-1 text-xs text-gray-500">

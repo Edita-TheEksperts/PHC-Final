@@ -53,13 +53,17 @@ export default function MitarbeiterVerwaltungPage() {
   }
 
   async function fetchData() {
-    const res = await fetch("/api/admin/dashboard");
-    const data = await res.json();
-    const allEmployees = data.employees || [];
-    setEmployees(allEmployees);
-    setApprovedEmployees(allEmployees.filter((emp) => emp.status === "approved"));
-    setClients(data.clients || []);
-    setSchedules(data.schedules || []);
+    try {
+      const res = await fetch("/api/admin/dashboard");
+      const data = await res.json();
+      const allEmployees = data.employees || [];
+      setEmployees(allEmployees);
+      setApprovedEmployees(allEmployees.filter((emp) => emp.status === "approved"));
+      setClients(data.clients || []);
+      setSchedules(data.schedules || []);
+    } catch {
+      setEmployees([]); setApprovedEmployees([]); setClients([]); setSchedules([]);
+    }
   }
 
   useEffect(() => {
@@ -69,9 +73,11 @@ export default function MitarbeiterVerwaltungPage() {
 
   useEffect(() => {
     async function fetchServices() {
-      const res = await fetch("/api/admin/services");
-      const data = await res.json();
-      setAllServices(Array.isArray(data) ? data : []);
+      try {
+        const res = await fetch("/api/admin/services");
+        const data = await res.json();
+        setAllServices(Array.isArray(data) ? data : []);
+      } catch { setAllServices([]); }
     }
     fetchServices();
   }, []);
@@ -91,14 +97,16 @@ export default function MitarbeiterVerwaltungPage() {
   }, []);
 
   async function saveEditedSchedule() {
-    const res = await fetch(`/api/admin/schedules/${editSchedule.id}/edit`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(editSchedule),
-    });
-    const newSchedule = await res.json();
-    setSchedules(prev => [newSchedule, ...prev.map(s => s.id === editSchedule.id ? { ...s, status: "cancelled" } : s)]);
-    setEditSchedule(null);
+    try {
+      const res = await fetch(`/api/admin/schedules/${editSchedule.id}/edit`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editSchedule),
+      });
+      const newSchedule = await res.json();
+      setSchedules(prev => [newSchedule, ...prev.map(s => s.id === editSchedule.id ? { ...s, status: "cancelled" } : s)]);
+      setEditSchedule(null);
+    } catch { alert("Fehler beim Speichern."); }
   }
 
   async function handleCancelWithEmail(schedule, cancelledBy) {
@@ -130,8 +138,10 @@ export default function MitarbeiterVerwaltungPage() {
   }
 
   async function handleInvite(emp) {
-    await fetch("/api/invite-employee", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: emp.email, firstName: emp.firstName }) });
-    setEmployees(prev => prev.map(e => e.id === emp.id ? { ...e, invited: true } : e));
+    try {
+      await fetch("/api/invite-employee", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: emp.email, firstName: emp.firstName }) });
+      setEmployees(prev => prev.map(e => e.id === emp.id ? { ...e, invited: true } : e));
+    } catch { alert("Fehler beim Einladen."); }
   }
 
   const filterBtns = [
@@ -231,7 +241,7 @@ export default function MitarbeiterVerwaltungPage() {
                                   setVacations(prev => prev.map(x => x.id === v.id ? { ...x, employee: s.employee } : x));
                                   alert("Mitarbeiter zugewiesen!");
                                 }}
-                                className="px-2 py-1 text-[10px] bg-[#0F1F38] text-white rounded hover:bg-[#1a3050]"
+                                className="px-2 py-1 text-[10px] bg-[#04436F] text-white rounded hover:bg-[#033558]"
                               >
                                 Zuweisen
                               </button>
@@ -266,7 +276,7 @@ export default function MitarbeiterVerwaltungPage() {
                 onClick={() => setBookingFilter(bookingFilter === btn.id ? "" : btn.id)}
                 className={`px-3 py-1.5 rounded-full text-xs font-medium border transition
                   ${bookingFilter === btn.id
-                    ? "bg-[#0F1F38] text-white border-[#0F1F38]"
+                    ? "bg-[#04436F] text-white border-[#04436F]"
                     : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"}`}
               >
                 {btn.label}
@@ -279,7 +289,7 @@ export default function MitarbeiterVerwaltungPage() {
                 <div className="flex-1">
                   <p
                     onClick={() => window.open(`/admin/clients/${s.user?.id}`, "_blank")}
-                    className="font-medium text-gray-900 text-sm hover:text-[#0F1F38] hover:underline cursor-pointer"
+                    className="font-medium text-gray-900 text-sm hover:text-[#04436F] hover:underline cursor-pointer"
                   >
                     {s.user ? `${s.user.firstName} ${s.user.lastName}` : "— Kein Kunde —"}
                   </p>
@@ -342,7 +352,7 @@ export default function MitarbeiterVerwaltungPage() {
                 Stornieren
               </button>
               <button
-                className="flex-1 px-4 py-2 text-sm bg-[#0F1F38] text-white rounded-lg hover:bg-[#1a3050] transition"
+                className="flex-1 px-4 py-2 text-sm bg-[#04436F] text-white rounded-lg hover:bg-[#033558] transition"
                 onClick={() => { setSelectedSchedule(null); setEditSchedule({ ...selectedSchedule, createNew: true }); }}
               >
                 Neu erstellen
@@ -375,7 +385,7 @@ export default function MitarbeiterVerwaltungPage() {
             </div>
             <div className="flex gap-3 mt-5">
               <button onClick={() => setEditSchedule(null)} className="flex-1 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-100 transition">Abbrechen</button>
-              <button onClick={saveEditedSchedule} className="flex-1 py-2 text-sm bg-[#0F1F38] text-white rounded-lg hover:bg-[#1a3050] transition">Speichern</button>
+              <button onClick={saveEditedSchedule} className="flex-1 py-2 text-sm bg-[#04436F] text-white rounded-lg hover:bg-[#033558] transition">Speichern</button>
             </div>
           </div>
         </div>
@@ -388,8 +398,8 @@ export default function MitarbeiterVerwaltungPage() {
             <h3 className="text-base font-semibold text-gray-900 mb-2">Wer storniert diesen Termin?</h3>
             <p className="text-sm text-gray-600 mb-5">Bitte wählen Sie, wer die Stornierung durchführt.</p>
             <div className="flex gap-3">
-              <button className="flex-1 py-2 text-sm bg-[#0F1F38] text-white rounded-lg hover:bg-[#1a3050] transition" onClick={() => handleCancelWithEmail(cancelQuestion, "kunde")}>Kunde</button>
-              <button className="flex-1 py-2 text-sm bg-[#0F1F38] text-white rounded-lg hover:bg-[#1a3050] transition" onClick={() => handleCancelWithEmail(cancelQuestion, "employee")}>Mitarbeiter</button>
+              <button className="flex-1 py-2 text-sm bg-[#04436F] text-white rounded-lg hover:bg-[#033558] transition" onClick={() => handleCancelWithEmail(cancelQuestion, "kunde")}>Kunde</button>
+              <button className="flex-1 py-2 text-sm bg-[#04436F] text-white rounded-lg hover:bg-[#033558] transition" onClick={() => handleCancelWithEmail(cancelQuestion, "employee")}>Mitarbeiter</button>
             </div>
             <button className="mt-3 w-full py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-100 transition" onClick={() => setCancelQuestion(null)}>Abbrechen</button>
           </div>

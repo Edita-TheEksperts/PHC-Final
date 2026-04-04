@@ -8,7 +8,7 @@ const navItems = [
   { label: "Dashboard", path: "/client-dashboard", icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" },
   { label: "Persönliche Informationen", path: "/dashboard/formular", icon: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" },
   { label: "Finanzen", path: "/dashboard/finanzen", icon: "M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" },
-  { label: "Kündigung", path: "/dashboard/kundigung", icon: "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16", danger: true },
+  { label: "Nachrichten & Feedback", path: "/dashboard/nachrichten", icon: "M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" },
 ];
 
 export default function FinanzenPage() {
@@ -195,7 +195,23 @@ export default function FinanzenPage() {
           <p className="text-sm text-gray-400 mt-0.5">Zahlungsübersicht und Zahlungsmethode</p>
         </div>
 
-        <div className="px-6 lg:px-10 py-8 grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        <div className="px-6 lg:px-10 py-8 space-y-6">
+
+          {/* Zahlungsstatus & Hinweise */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+            <h3 className="text-sm font-bold text-gray-900 mb-3">Zahlungsstatus</h3>
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                Alle Zahlungen aktuell
+              </span>
+            </div>
+            <p className="text-xs text-gray-400 mt-3">
+              Zahlungen werden automatisch nach erbrachter Leistung abgerechnet.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
 
           {/* Monthly overview */}
           <div>
@@ -242,6 +258,7 @@ export default function FinanzenPage() {
                 {paymentMethod ? "Karte ändern" : "Karte hinzufügen"}
               </button>
             </div>
+          </div>
           </div>
         </div>
       </main>

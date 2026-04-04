@@ -1481,6 +1481,7 @@ const timeOptions = Array.from({ length: 48 }, (_, i) => {
   };
 
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const toggleShowPassword = () => setShowPassword(!showPassword);
   const toggleShowConfirm = () => setShowConfirm(!showConfirm);
@@ -3020,6 +3021,7 @@ onChange={(date) => {
     individueller für Sie gestalten. Wir freuen uns auf Ihre Bedürfnisse einzugehen.
   </p>
 </div>
+                {(form.services || []).some(s => s.includes("Alltagsbegleitung")) && (
                 <div className="border border-gray-300 rounded-lg p-6 bg-white shadow-sm">
                   <h2 className="font-bold text-[20px] mb-6">
                     {" "}
@@ -3148,6 +3150,8 @@ onChange={(date) => {
                     />
                   </div>
                 </div>
+)}
+                {(form.services || []).some(s => s.includes("Freizeit")) && (
 <div className="border border-gray-300 rounded-lg p-6 bg-white shadow-sm mt-8">
 
   <h2 className="font-bold text-[20px] mb-6">
@@ -3212,8 +3216,10 @@ onChange={(date) => {
     ))}
   </div>
 </div>
+                )}
+                {(form.services || []).some(s => s.includes("Alltagsbegleitung") || s.includes("Freizeit") || s.includes("Gesundheit")) && (
                 <div className="border border-gray-300 rounded-lg p-6 bg-white shadow-sm mt-8">
-           
+
                   <h2 className="font-bold text-[20px] mb-6">
                     {" "}
                    Gesundheitsinformationen
@@ -3570,6 +3576,8 @@ onChange={(date) => {
                   />
                 </div>
 
+                )}
+                {(form.services || []).some(s => s.includes("Haushalt")) && (
                 <div className="border border-gray-300 rounded-lg p-6 bg-white shadow-sm mt-8">
                   <h2 className="font-bold text-[20px] mb-6">
                     {" "}
@@ -3671,6 +3679,7 @@ onChange={(date) => {
                     </div>
                   )}
                 </div>
+                )}
 
                 <div className="border border-gray-300 rounded-lg p-6 bg-white shadow-sm mt-8">
                   <h2 className="font-bold text-[20px] mb-6">

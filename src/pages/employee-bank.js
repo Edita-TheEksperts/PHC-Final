@@ -87,7 +87,7 @@ export default function EmployeeBank() {
     <EmployeeLayout>
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
-          <div className="w-8 h-8 border-2 border-[#0F1F38] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <div className="w-8 h-8 border-2 border-[#04436F] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
           <p className="text-sm text-gray-500">Lade Finanzdaten...</p>
         </div>
       </div>
@@ -103,7 +103,7 @@ export default function EmployeeBank() {
   );
 
   const t = paymentTotals?.thisMonth;
-  const inputCls = "w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0F1F38]/20 focus:border-[#0F1F38] transition";
+  const inputCls = "w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#04436F]/20 focus:border-[#04436F] transition";
   const labelCls = "block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5";
 
   return (
@@ -135,7 +135,7 @@ export default function EmployeeBank() {
 
         {/* Total card */}
         {t && (
-          <div className="bg-[#0F1F38] rounded-xl p-5 flex items-center justify-between">
+          <div className="bg-[#04436F] rounded-xl p-5 flex items-center justify-between">
             <div>
               <p className="text-xs text-white/60 uppercase tracking-wide mb-1">Gesamt diesen Monat</p>
               <p className="text-2xl font-bold text-white">CHF {t.total ?? 0}</p>
@@ -228,7 +228,7 @@ export default function EmployeeBank() {
               )}
 
               <button type="submit"
-                className="w-full py-2.5 bg-[#0F1F38] hover:bg-[#1a3050] text-white text-sm font-medium rounded-lg transition">
+                className="w-full py-2.5 bg-[#04436F] hover:bg-[#033558] text-white text-sm font-medium rounded-lg transition">
                 Bankdaten speichern
               </button>
             </form>

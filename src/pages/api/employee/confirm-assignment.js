@@ -31,7 +31,12 @@ export default async function handler(req, res) {
       return res.status(400).json({ message: "Invalid input" });
     }
 
-    // ✅ Always update assignment first
+    // Check current status BEFORE updating to prevent duplicate emails
+    const existing = await prisma.assignment.findUnique({
+      where: { id: assignmentId },
+      select: { confirmationStatus: true },
+    });
+
     const updated = await prisma.assignment.update({
       where: { id: assignmentId },
       data: {
@@ -49,9 +54,8 @@ export default async function handler(req, res) {
       },
     });
 
-
-    // Prevent duplicate contract emails: only send if not already confirmed
-    if (action === "confirmed" && updated.confirmationStatus !== "confirmed") {
+    // Only send emails if not already confirmed (prevent duplicates)
+    if (action === "confirmed" && existing?.confirmationStatus !== "confirmed") {
       try {
         const { sendAssignmentContractEmail } = await import("../../../lib/emailHelpers.js");
         await sendAssignmentContractEmail(updated);

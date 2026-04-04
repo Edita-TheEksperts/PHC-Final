@@ -1,7 +1,7 @@
 import { prisma } from "../../../lib/prisma";
 
 const CLIENT_STATUSES = ["open", "aktiv", "inaktiv", "storniert", "gekuendigt"];
-const EMPLOYEE_STATUSES = ["pending", "approved", "rejected", "inaktiv"];
+const EMPLOYEE_STATUSES = ["pending", "geprueft", "invited", "interview", "entscheid", "approved", "rejected", "inaktiv"];
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });

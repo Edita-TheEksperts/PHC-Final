@@ -94,6 +94,7 @@ await prisma.employee.create({
     servicesOffered: data.servicesOffered || [],
 // === FILES ===
 passportFile: normalizeFile(data.passportFrontFile),
+passportBackFile: normalizeFile(data.passportBackFile),
 visaFile: normalizeFile(data.workPermitFile),
 policeLetterFile: normalizeFile(data.policeLetterFile),
 cvFile: normalizeFile(data.cvFile),

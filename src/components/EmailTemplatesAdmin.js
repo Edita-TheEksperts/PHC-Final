@@ -55,7 +55,7 @@ export default function EmailTemplatesAdmin() {
           placeholder="Vorlage suchen..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0F1F38]/20 focus:border-[#0F1F38] transition"
+          className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#04436F]/20 focus:border-[#04436F] transition"
         />
       </div>
 
@@ -75,7 +75,7 @@ export default function EmailTemplatesAdmin() {
                     value={form.subject}
                     onChange={(e) => setForm({ ...form, subject: e.target.value })}
                     placeholder="E-Mail Betreff"
-                    className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0F1F38]/20 focus:border-[#0F1F38] transition"
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#04436F]/20 focus:border-[#04436F] transition"
                   />
                 </div>
 
@@ -101,7 +101,7 @@ export default function EmailTemplatesAdmin() {
                 <div className="flex gap-2 pt-1">
                   <button
                     onClick={saveEdit}
-                    className="px-4 py-2 bg-[#0F1F38] hover:bg-[#1a3050] text-white text-sm font-medium rounded-lg transition"
+                    className="px-4 py-2 bg-[#04436F] hover:bg-[#033558] text-white text-sm font-medium rounded-lg transition"
                   >
                     Speichern
                   </button>
@@ -130,7 +130,7 @@ export default function EmailTemplatesAdmin() {
                 <div className="px-5 py-3 border-t border-gray-100">
                   <button
                     onClick={() => startEdit(email)}
-                    className="w-full py-2 bg-[#0F1F38] hover:bg-[#1a3050] text-white text-sm font-medium rounded-lg transition"
+                    className="w-full py-2 bg-[#04436F] hover:bg-[#033558] text-white text-sm font-medium rounded-lg transition"
                   >
                     Vorlage bearbeiten
                   </button>

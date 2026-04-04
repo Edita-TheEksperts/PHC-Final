@@ -24,8 +24,8 @@ export default async function handler(req, res) {
     if (!userId || !employeeId || !rating) {
       return res.status(400).json({ error: "userId, employeeId and rating are required" });
     }
-    if (rating < 1 || rating > 5) {
-      return res.status(400).json({ error: "Rating must be between 1 and 5" });
+    if (rating < 1 || rating > 6) {
+      return res.status(400).json({ error: "Rating must be between 1 and 6" });
     }
 
     try {

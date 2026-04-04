@@ -79,7 +79,7 @@ Nehmen Sie zuerst mit uns Kontakt auf, bevor Sie einen Entscheid<br></br> treffe
 Sichern Sie sich unsere kostenlose Online-Beratung. Mit Prime<br></br> Home Care erhalten Sie alle Informationen rund um das Thema<br></br> Seniorenbetreuung zu Hause!
 </p>
 
-          <button className="bg-[#04436F] text-white lg:mt-[60px] px-6 py-3 rounded-full text-[18px] font-medium mt-6 transition duration-300 hover:bg-[#6FCF97]">
+          <button className="bg-[#04436F] text-white lg:mt-[60px] px-6 py-3 rounded-full text-[18px] font-medium mt-6 transition duration-300 hover:bg-[#B99B5F]">
           Jetzt bessere Betreuung organisieren
                     </button>
         </section>

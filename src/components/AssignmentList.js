@@ -103,7 +103,7 @@ export default function AssignmentsList({ confirmedAssignments = [], onUpdate })
     });
   });
 
-  const inputCls = "border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F1F38]/20 focus:border-[#0F1F38] transition";
+  const inputCls = "border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#04436F]/20 focus:border-[#04436F] transition";
 
   const renderCard = (s) => {
     const cfg = STATUS_CONFIG[s.status] || STATUS_CONFIG.future;
@@ -155,7 +155,7 @@ export default function AssignmentsList({ confirmedAssignments = [], onUpdate })
             </div>
             <button
               onClick={() => handleSave(s)}
-              className="w-full py-2 bg-[#0F1F38] hover:bg-[#1a3050] text-white text-sm font-medium rounded-lg transition"
+              className="w-full py-2 bg-[#04436F] hover:bg-[#033558] text-white text-sm font-medium rounded-lg transition"
             >
               Speichern
             </button>

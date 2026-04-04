@@ -10,6 +10,10 @@ export default async function handler(req, res) {
     return res.status(400).json({ message: "Fehlender Token oder Passwort" });
   }
 
+  if (newPassword.length < 8 || !/[a-z]/.test(newPassword) || !/[A-Z]/.test(newPassword) || !/\d/.test(newPassword) || !/[^A-Za-z0-9]/.test(newPassword)) {
+    return res.status(400).json({ message: "Passwort muss mindestens 8 Zeichen, Gross-/Kleinbuchstaben, eine Zahl und ein Sonderzeichen enthalten." });
+  }
+
   // Check both user (client) and employee tables
   const user = await prisma.user.findFirst({ where: { resetToken } });
   const employee = !user ? await prisma.employee.findFirst({ where: { resetToken } }) : null;

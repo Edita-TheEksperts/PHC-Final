@@ -142,27 +142,34 @@ export default function Einsaetze() {
         const res = await fetch("/api/einsaetze");
         const json = await res.json();
         setData(json);
+      } catch {
+        setData({ aktive: [], vergangene: [], stornierte: [], abgeänderte: [], offeneZuweisungen: [], rejected: [] });
+      } finally {
         setLoading(false);
-      } catch {}
+      }
     };
     load();
   }, []);
 
   useEffect(() => {
     async function fetchServices() {
-      const res = await fetch("/api/admin/services");
-      const data = await res.json();
-      setAllServices(Array.isArray(data) ? data : []);
+      try {
+        const res = await fetch("/api/admin/services");
+        const data = await res.json();
+        setAllServices(Array.isArray(data) ? data : []);
+      } catch { setAllServices([]); }
     }
     fetchServices();
   }, []);
 
   useEffect(() => {
     async function fetchEmployees() {
-      const res = await fetch("/api/admin/employees");
-      const employees = await res.json();
-      const safe = Array.isArray(employees) ? employees : [];
-      setAllEmployees(safe.filter((e) => isAcceptedStatus(e.status)));
+      try {
+        const res = await fetch("/api/admin/employees");
+        const employees = await res.json();
+        const safe = Array.isArray(employees) ? employees : [];
+        setAllEmployees(safe.filter((e) => isAcceptedStatus(e.status)));
+      } catch { setAllEmployees([]); }
     }
     fetchEmployees();
   }, []);
@@ -263,7 +270,7 @@ export default function Einsaetze() {
               onClick={() => setFilter(btn.id)}
               className={`px-3 py-1.5 rounded-full text-xs font-medium border transition
                 ${filter === btn.id
-                  ? "bg-[#0F1F38] text-white border-[#0F1F38]"
+                  ? "bg-[#04436F] text-white border-[#04436F]"
                   : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"}`}
             >
               {btn.label}
@@ -276,26 +283,26 @@ export default function Einsaetze() {
           <input
             type="text"
             placeholder="Kunde suchen..."
-            className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0F1F38]/20 focus:border-[#0F1F38]"
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#04436F]/20 focus:border-[#04436F]"
             value={clientSearch}
             onChange={(e) => setClientSearch(e.target.value)}
           />
           <input
             type="text"
             placeholder="Mitarbeiter suchen..."
-            className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0F1F38]/20 focus:border-[#0F1F38]"
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#04436F]/20 focus:border-[#04436F]"
             value={employeeSearch}
             onChange={(e) => setEmployeeSearch(e.target.value)}
           />
           <input
             type="date"
-            className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0F1F38]/20 focus:border-[#0F1F38]"
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#04436F]/20 focus:border-[#04436F]"
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
           />
           <input
             type="date"
-            className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0F1F38]/20 focus:border-[#0F1F38]"
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#04436F]/20 focus:border-[#04436F]"
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
           />
@@ -312,12 +319,12 @@ export default function Einsaetze() {
               onClick={() => setActiveTab(tab.id)}
               className={`px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition
                 ${activeTab === tab.id
-                  ? "border-[#0F1F38] text-[#0F1F38] bg-white"
+                  ? "border-[#04436F] text-[#04436F] bg-white"
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50"}`}
             >
               {tab.label}
               {data[tab.id] && (
-                <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${activeTab === tab.id ? "bg-[#0F1F38] text-white" : "bg-gray-100 text-gray-500"}`}>
+                <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${activeTab === tab.id ? "bg-[#04436F] text-white" : "bg-gray-100 text-gray-500"}`}>
                   {data[tab.id].length}
                 </span>
               )}
@@ -383,7 +390,7 @@ export default function Einsaetze() {
               <div className="mt-4 border-t border-gray-100 pt-4">
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Mitarbeiter zuweisen</p>
                 <select
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F1F38]/20 focus:border-[#0F1F38]"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#04436F]/20 focus:border-[#04436F]"
                   value={selectedItem.employeeId || ""}
                   onChange={(e) => { setAssignMsg({ type: "", text: "" }); setSelectedItem((prev) => ({ ...prev, employeeId: e.target.value })); }}
                 >
@@ -395,7 +402,7 @@ export default function Einsaetze() {
                 <button
                   onClick={assignEmployeeToSchedule}
                   disabled={!selectedItem.employeeId || assignLoading}
-                  className="mt-3 w-full bg-[#0F1F38] hover:bg-[#1a3050] text-white py-2 rounded-lg text-sm disabled:bg-gray-200 disabled:text-gray-400 transition"
+                  className="mt-3 w-full bg-[#04436F] hover:bg-[#033558] text-white py-2 rounded-lg text-sm disabled:bg-gray-200 disabled:text-gray-400 transition"
                 >
                   {assignLoading ? "Zuweisen..." : "Mitarbeiter zuweisen"}
                 </button>
@@ -411,7 +418,7 @@ export default function Einsaetze() {
               </button>
               <button
                 onClick={() => { setEditItem({ ...selectedItem, userId: selectedItem.user?.id, employeeId: selectedItem.employee?.id || null }); setSelectedItem(null); setAssignMsg({ type: "", text: "" }); }}
-                className="flex-1 py-2 text-sm bg-[#0F1F38] text-white rounded-lg hover:bg-[#1a3050] transition"
+                className="flex-1 py-2 text-sm bg-[#04436F] text-white rounded-lg hover:bg-[#033558] transition"
               >
                 Bearbeiten
               </button>
@@ -440,7 +447,7 @@ export default function Einsaetze() {
             </div>
             <div className="flex gap-3 mt-5">
               <button onClick={() => setEditItem(null)} className="flex-1 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-100 transition">Abbrechen</button>
-              <button onClick={saveEditedEinsatz} className="flex-1 py-2 text-sm bg-[#0F1F38] text-white rounded-lg hover:bg-[#1a3050] transition">Speichern</button>
+              <button onClick={saveEditedEinsatz} className="flex-1 py-2 text-sm bg-[#04436F] text-white rounded-lg hover:bg-[#033558] transition">Speichern</button>
             </div>
           </div>
         </div>

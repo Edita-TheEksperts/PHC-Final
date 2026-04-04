@@ -17,7 +17,19 @@ export default function EmployeeDashboard() {
   const [paymentTotals, setPaymentTotals] = useState(null);
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [activeTab, setActiveTab] = useState("pending");
+  const [nachrichtText, setNachrichtText] = useState("");
+  const [nachrichtType, setNachrichtType] = useState("Nachricht an PHC");
+  const [nachrichtSending, setNachrichtSending] = useState(false);
+  const [nachrichtFeedback, setNachrichtFeedback] = useState(null);
   const router = useRouter();
+
+  // Handle tab from URL query
+  useEffect(() => {
+    const tab = router.query.tab;
+    if (tab === "einsaetze") setActiveTab("confirmed");
+    else if (tab === "urlaub") setActiveTab("vacation");
+    else if (tab === "nachrichten") setActiveTab("nachrichten");
+  }, [router.query.tab]);
 
   useEffect(() => {
     const email = localStorage.getItem("email");
@@ -93,7 +105,7 @@ export default function EmployeeDashboard() {
     <EmployeeLayout>
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
-          <div className="w-8 h-8 border-2 border-[#0F1F38] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <div className="w-8 h-8 border-2 border-[#04436F] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
           <p className="text-sm text-gray-500">Lade Dashboard...</p>
         </div>
       </div>
@@ -110,10 +122,17 @@ export default function EmployeeDashboard() {
 
   const initials = `${employeeData.firstName?.[0] || ""}${employeeData.lastName?.[0] || ""}`.toUpperCase() || "M";
 
+  // Aufgaben (missing data alerts)
+  const aufgaben = [];
+  if (!employeeData?.iban && !employeeData?.bankName) aufgaben.push("Bankdaten fehlen");
+  if (!employeeData?.passportFile && !employeeData?.visaFile) aufgaben.push("Dokumente fehlen");
+  if (!employeeData?.phone) aufgaben.push("Telefonnummer fehlt");
+
   const tabsWithCounts = [
     { id: "pending", label: "Ausstehend", count: pendingAssignments.length },
     { id: "confirmed", label: "Einsätze", count: confirmedAssignments.length },
-    { id: "vacation", label: "Urlaub", count: vacations.length },
+    { id: "vacation", label: "Abwesenheiten", count: vacations.length },
+    { id: "nachrichten", label: "Nachrichten", count: null },
     { id: "rejected", label: "Abgelehnt", count: rejectedAssignments.length },
   ];
 
@@ -180,14 +199,28 @@ export default function EmployeeDashboard() {
         {/* Greeting + quick actions */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-[#0F1F38] flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+            <div className="w-12 h-12 rounded-full bg-[#04436F] flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
               {initials}
             </div>
             <div>
               <h1 className="text-xl font-semibold text-gray-900">
-                Willkommen, {employeeData.firstName} {employeeData.lastName}
+                Hallo {employeeData.firstName} {employeeData.lastName}
               </h1>
-              <p className="text-sm text-gray-500">Mitarbeiter Dashboard</p>
+              <div className="flex items-center gap-2 mt-1">
+                {confirmedAssignments.length > 0 ? (
+                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />Sie sind aktuell eingeplant
+                  </span>
+                ) : pendingAssignments.length > 0 ? (
+                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />Anfrage offen - bitte reagieren
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 bg-gray-50 border border-gray-200 px-2.5 py-0.5 rounded-full">
+                    <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />Kein Einsatz geplant
+                  </span>
+                )}
+              </div>
             </div>
           </div>
           <div className="flex gap-2 flex-wrap">
@@ -219,6 +252,21 @@ export default function EmployeeDashboard() {
             </div>
           ))}
         </div>
+
+        {/* Aufgaben (missing data) */}
+        {aufgaben.length > 0 && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+            <h3 className="text-sm font-semibold text-red-800 mb-2">Offene Aufgaben</h3>
+            <ul className="space-y-1.5">
+              {aufgaben.map((task, i) => (
+                <li key={i} className="flex items-center gap-2 text-sm text-red-700">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0" />
+                  {task}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {/* Next shift + vacation row */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -274,7 +322,7 @@ export default function EmployeeDashboard() {
                 <p className="text-sm text-gray-400">Kein genehmigter Urlaub</p>
                 <button
                   onClick={() => setActiveTab("vacation")}
-                  className="text-xs text-[#0F1F38] font-medium hover:underline"
+                  className="text-xs text-[#04436F] font-medium hover:underline"
                 >
                   Urlaub anfragen →
                 </button>
@@ -294,14 +342,14 @@ export default function EmployeeDashboard() {
                     onClick={() => setActiveTab(tab.id)}
                     className={`flex items-center gap-2 px-4 py-3.5 text-sm font-medium border-b-2 transition -mb-px whitespace-nowrap ${
                       activeTab === tab.id
-                        ? "border-[#0F1F38] text-[#0F1F38]"
+                        ? "border-[#04436F] text-[#04436F]"
                         : "border-transparent text-gray-500 hover:text-gray-700"
                     }`}
                   >
                     {tab.label}
                     {tab.count > 0 && (
                       <span className={`text-[10px] font-bold rounded-full px-1.5 py-0.5 min-w-[18px] text-center ${
-                        activeTab === tab.id ? "bg-[#0F1F38] text-white" : "bg-gray-100 text-gray-600"
+                        activeTab === tab.id ? "bg-[#04436F] text-white" : "bg-gray-100 text-gray-600"
                       }`}>
                         {tab.count}
                       </span>
@@ -372,7 +420,7 @@ export default function EmployeeDashboard() {
                         dateFormat="dd.MM.yyyy"
                         placeholderText="Startdatum wählen"
                         minDate={new Date()}
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F1F38]/20 focus:border-[#0F1F38] transition"
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#04436F]/20 focus:border-[#04436F] transition"
                       />
                     </div>
                     <div>
@@ -383,13 +431,13 @@ export default function EmployeeDashboard() {
                         dateFormat="dd.MM.yyyy"
                         placeholderText="Enddatum wählen"
                         minDate={vacationStart || new Date()}
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F1F38]/20 focus:border-[#0F1F38] transition"
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#04436F]/20 focus:border-[#04436F] transition"
                       />
                     </div>
                     <button
                       onClick={handleVacationSave}
                       disabled={!vacationStart || !vacationEnd}
-                      className="py-2.5 bg-[#0F1F38] hover:bg-[#1a3050] disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition"
+                      className="py-2.5 bg-[#04436F] hover:bg-[#033558] disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition"
                     >
                       Urlaubsanfrage senden
                     </button>
@@ -437,6 +485,48 @@ export default function EmployeeDashboard() {
                         <span className="text-xs font-medium bg-red-50 text-red-600 border border-red-200 rounded-full px-2.5 py-1">Abgelehnt</span>
                       </div>
                     ))
+                  )}
+                </div>
+              )}
+
+              {/* Nachrichten Tab */}
+              {activeTab === "nachrichten" && (
+                <div className="max-w-lg space-y-5">
+                  <div>
+                    <p className="text-sm font-medium text-gray-700 mb-2">Kategorie wählen:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {["Nachricht an PHC", "Rückmeldung zu Einsätzen", "Probleme / Hinweise melden"].map(type => (
+                        <button key={type} type="button" onClick={() => setNachrichtType(type)}
+                          className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${nachrichtType === type ? "bg-[#04436F] text-white border-[#04436F]" : "bg-white text-gray-600 border-gray-200"}`}>
+                          {type}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <textarea value={nachrichtText} onChange={e => setNachrichtText(e.target.value)}
+                    placeholder="Ihre Nachricht..." rows={4}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#04436F]/20 resize-none" />
+                  <button
+                    disabled={nachrichtSending || !nachrichtText.trim()}
+                    onClick={async () => {
+                      setNachrichtSending(true); setNachrichtFeedback(null);
+                      try {
+                        const res = await fetch("/api/admin/notes", {
+                          method: "POST", headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ employeeId: employeeData.id, text: `[${nachrichtType}] ${nachrichtText}`, author: `${employeeData.firstName} ${employeeData.lastName}` }),
+                        });
+                        if (res.ok) { setNachrichtFeedback({ type: "success", text: "Nachricht gesendet." }); setNachrichtText(""); }
+                        else setNachrichtFeedback({ type: "error", text: "Fehler beim Senden." });
+                      } catch { setNachrichtFeedback({ type: "error", text: "Netzwerkfehler." }); }
+                      finally { setNachrichtSending(false); }
+                    }}
+                    className="w-full py-3 bg-[#04436F] text-white rounded-xl text-sm font-medium hover:bg-[#033558] transition disabled:opacity-50">
+                    {nachrichtSending ? "Wird gesendet..." : "Nachricht senden"}
+                  </button>
+                  {nachrichtFeedback && (
+                    <div className={`p-3 rounded-xl text-sm ${nachrichtFeedback.type === "success" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
+                      {nachrichtFeedback.text}
+                    </div>
                   )}
                 </div>
               )}

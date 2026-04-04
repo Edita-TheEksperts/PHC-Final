@@ -65,7 +65,8 @@ const [uiMessage, setUiMessage] = useState(null);
 const [activeTab, setActiveTab] = useState("dashboard");
 const [updatedData, setUpdatedData] = useState({});
 const [showAppointments, setShowAppointments] = useState(true);
-const [showHistory, setShowHistory] = useState(true);
+const [terminePage, setTerminePage] = useState(0);
+const [showHistory, setShowHistory] = useState(false);
 const [showUserInfo, setShowUserInfo] = useState(true);
 const [showVacations, setShowVacations] = useState(true);
 const [showBooking, setShowBooking] = useState(true);
@@ -776,7 +777,7 @@ await fetchAppointments(userId);
     { label: "Dashboard", path: "/client-dashboard", icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" },
     { label: "Persönliche Informationen", path: "/dashboard/formular", icon: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" },
     { label: "Finanzen", path: "/dashboard/finanzen", icon: "M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" },
-    { label: "Kündigung", path: "/dashboard/kundigung", icon: "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16", danger: true },
+    { label: "Nachrichten & Feedback", path: "/dashboard/nachrichten", icon: "M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" },
   ];
 
   return (
@@ -883,9 +884,22 @@ await fetchAppointments(userId);
           <div className="bg-white border-b border-gray-100 px-6 lg:px-10 py-4 flex items-center justify-between">
             <div>
               <h2 className="text-xl font-bold text-gray-900">
-                {getGreeting()}, {userData?.firstName}! 👋
+                Hallo {userData?.firstName} {userData?.lastName}
               </h2>
               <p className="text-sm text-gray-400 mt-0.5">{todayFormatted}</p>
+              <div className="flex items-center gap-2 mt-2">
+                {clientDetails?.assignments?.some(a => a.employee) ? (
+                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    Betreuung bestätigt
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                    Betreuung wird organisiert
+                  </span>
+                )}
+              </div>
             </div>
             <div className="hidden lg:flex items-center gap-3">
               {activeAppointments.length > 0 && (
@@ -999,9 +1013,9 @@ await fetchAppointments(userId);
                     </span>
                   )}
                 </div>
-                <div className="p-4 space-y-3 max-h-96 overflow-y-auto">
+                <div className="p-4 space-y-3">
                   {activeAppointments.length > 0 ? (
-                    activeAppointments.map((appt) => {
+                    activeAppointments.slice(terminePage * 6, terminePage * 6 + 6).map((appt) => {
                       const days = daysUntil(appt.date);
                       return (
                         <div key={appt.id} className="p-4 bg-gray-50 rounded-xl border border-gray-100 hover:border-[#B99B5F]/30 hover:bg-[#B99B5F]/5 transition group">
@@ -1033,6 +1047,11 @@ await fetchAppointments(userId);
                                   {appt.serviceName}
                                 </span>
                               )}
+                              <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full border ${
+                                appt.employee ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-amber-50 text-amber-700 border-amber-200"
+                              }`}>
+                                {appt.employee ? "bestätigt" : "wird organisiert"}
+                              </span>
                             </div>
                             <div className="flex flex-col gap-1.5 flex-shrink-0">
                               <button
@@ -1059,6 +1078,21 @@ await fetchAppointments(userId);
                       </div>
                       <p className="text-sm font-medium text-gray-400">Keine aktiven Termine</p>
                       <p className="text-xs text-gray-300 mt-1">Buchen Sie Ihren ersten Termin</p>
+                    </div>
+                  )}
+                  {activeAppointments.length > 6 && (
+                    <div className="flex items-center justify-between pt-2">
+                      <button disabled={terminePage === 0} onClick={() => setTerminePage(p => p - 1)}
+                        className="text-xs font-medium text-[#B99B5F] hover:underline disabled:text-gray-300 disabled:no-underline">
+                        Zurück
+                      </button>
+                      <span className="text-xs text-gray-400">
+                        {terminePage * 6 + 1}–{Math.min((terminePage + 1) * 6, activeAppointments.length)} von {activeAppointments.length}
+                      </span>
+                      <button disabled={(terminePage + 1) * 6 >= activeAppointments.length} onClick={() => setTerminePage(p => p + 1)}
+                        className="text-xs font-medium text-[#B99B5F] hover:underline disabled:text-gray-300 disabled:no-underline">
+                        Weiter
+                      </button>
                     </div>
                   )}
                 </div>
@@ -1318,8 +1352,10 @@ await fetchAppointments(userId);
                             )}
                             <div className="flex-1 min-w-0">
                               <p className="text-base font-bold text-gray-900">{emp.firstName} {emp.lastName}</p>
-                              {emp.city && <p className="text-xs text-gray-500 mt-0.5">📍 {emp.city}</p>}
-                              {emp.phone && <p className="text-xs text-gray-500">📞 {emp.phone}</p>}
+                              {assignment.createdAt && <p className="text-xs text-gray-400 mt-0.5">Zuständig ab {new Date(assignment.createdAt).toLocaleDateString("de-CH")}</p>}
+                              {emp.phone && <p className="text-xs text-gray-500 mt-1">📞 {emp.phone}</p>}
+                              {emp.email && <p className="text-xs text-gray-500">✉️ {emp.email}</p>}
+                              {emp.city && <p className="text-xs text-gray-500">📍 {emp.city}</p>}
                               {Array.isArray(emp.languages) && emp.languages.length > 0 && (
                                 <div className="flex flex-wrap gap-1 mt-2">
                                   {emp.languages.map(lang => (
@@ -1601,7 +1637,7 @@ await fetchAppointments(userId);
             <div>
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Ihre Bewertung</p>
               <div className="flex gap-2">
-                {[1, 2, 3, 4, 5].map((star) => (
+                {[1, 2, 3, 4, 5, 6].map((star) => (
                   <button
                     key={star}
                     onClick={() => setRatingData(prev => ({ ...prev, rating: star }))}
@@ -1613,7 +1649,7 @@ await fetchAppointments(userId);
               </div>
               {ratingData.rating > 0 && (
                 <p className="text-xs text-[#B99B5F] font-semibold mt-1">
-                  {["", "Sehr schlecht", "Schlecht", "Gut", "Sehr gut", "Ausgezeichnet"][ratingData.rating]}
+                  {["", "Sehr schlecht", "Schlecht", "Durchschnittlich", "Gut", "Sehr gut", "Ausgezeichnet"][ratingData.rating]}
                 </p>
               )}
             </div>

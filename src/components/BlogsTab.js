@@ -178,7 +178,7 @@ export default function BlogsTab() {
               {migrating ? "Importiere..." : "Blogs importieren (einmalig)"}
             </button>
             <button onClick={startCreate}
-              className="flex items-center gap-2 px-4 py-2 bg-[#0F1F38] text-white rounded-lg text-sm font-medium hover:bg-[#1a3050] transition">
+              className="flex items-center gap-2 px-4 py-2 bg-[#04436F] text-white rounded-lg text-sm font-medium hover:bg-[#033558] transition">
               <PlusCircle size={16} /> Neuer Blog
             </button>
           </div>
@@ -188,7 +188,7 @@ export default function BlogsTab() {
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           {loading ? (
             <div className="flex justify-center py-20">
-              <div className="w-8 h-8 border-2 border-[#0F1F38] border-t-transparent rounded-full animate-spin" />
+              <div className="w-8 h-8 border-2 border-[#04436F] border-t-transparent rounded-full animate-spin" />
             </div>
           ) : blogs.length === 0 ? (
             <p className="text-center text-gray-400 py-20 text-sm">Keine Blogs vorhanden.</p>
@@ -249,7 +249,7 @@ export default function BlogsTab() {
     );
   }
 
-  const inputCls = "w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0F1F38]/20 focus:border-[#0F1F38] transition";
+  const inputCls = "w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#04436F]/20 focus:border-[#04436F] transition";
   const labelCls = "block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5";
   const cardCls = "bg-white rounded-xl border border-gray-200 p-6 space-y-4";
 
@@ -290,7 +290,7 @@ export default function BlogsTab() {
               className={`${inputCls} font-mono`} />
             {form.slug && (
               <p className="mt-1 text-xs text-gray-400">
-                phc.ch/blog/<strong className="text-[#0F1F38]">{form.slug}</strong>
+                phc.ch/blog/<strong className="text-[#04436F]">{form.slug}</strong>
               </p>
             )}
           </div>
@@ -341,7 +341,7 @@ export default function BlogsTab() {
           <div className="flex items-center gap-2 pt-1">
             <input type="checkbox" id="published" checked={form.published}
               onChange={e => setForm(f => ({ ...f, published: e.target.checked }))}
-              className="w-4 h-4 rounded border-gray-300 text-[#0F1F38]" />
+              className="w-4 h-4 rounded border-gray-300 text-[#04436F]" />
             <label htmlFor="published" className="text-sm font-medium text-gray-700">Veröffentlicht</label>
           </div>
         </div>
@@ -384,7 +384,7 @@ export default function BlogsTab() {
         <div className={cardCls}>
           <div className="flex items-center justify-between border-b border-gray-100 pb-3">
             <h2 className="text-xs font-semibold text-gray-900 uppercase tracking-wide">Abschnitte ({form.sections.length})</h2>
-            <button onClick={addSection} className="flex items-center gap-1 text-xs font-medium text-[#0F1F38] hover:underline">
+            <button onClick={addSection} className="flex items-center gap-1 text-xs font-medium text-[#04436F] hover:underline">
               <PlusCircle size={14} /> Abschnitt hinzufügen
             </button>
           </div>
@@ -409,7 +409,7 @@ export default function BlogsTab() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Absätze</label>
-                  <button onClick={() => addParagraph(si)} className="text-xs font-medium text-[#0F1F38] hover:underline flex items-center gap-1">
+                  <button onClick={() => addParagraph(si)} className="text-xs font-medium text-[#04436F] hover:underline flex items-center gap-1">
                     <PlusCircle size={12} /> Absatz
                   </button>
                 </div>
@@ -429,7 +429,7 @@ export default function BlogsTab() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">FAQs (optional)</label>
-                  <button onClick={() => addFaq(si)} className="text-xs font-medium text-[#0F1F38] hover:underline flex items-center gap-1">
+                  <button onClick={() => addFaq(si)} className="text-xs font-medium text-[#04436F] hover:underline flex items-center gap-1">
                     <PlusCircle size={12} /> FAQ
                   </button>
                 </div>
@@ -457,7 +457,7 @@ export default function BlogsTab() {
         {/* Save bar */}
         <div className="flex items-center gap-4 pb-10">
           <button onClick={handleSave} disabled={saving}
-            className="px-6 py-2.5 bg-[#0F1F38] text-white rounded-lg text-sm font-medium hover:bg-[#1a3050] transition disabled:opacity-50">
+            className="px-6 py-2.5 bg-[#04436F] text-white rounded-lg text-sm font-medium hover:bg-[#033558] transition disabled:opacity-50">
             {saving ? "Speichern..." : editingId ? "Änderungen speichern" : "Blog erstellen"}
           </button>
           <button onClick={() => setView("list")} className="px-4 py-2.5 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition">

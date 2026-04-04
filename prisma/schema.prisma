@@ -83,6 +83,7 @@ model User {
   sonstige                String?
   transport               String?
   form4Completed          Boolean?      @default(false)
+  welcomeEmailSent        Boolean       @default(false)
   postalCode              String?
   firstName               String?
   lastName                String?
@@ -185,6 +186,7 @@ model User {
   kanton                  String?
   activityLogs            ActivityLog[] @relation("UserActivityLogs")
   assignments             Assignment[]
+  internalNotes           InternalNote[] @relation("UserNotes")
   reminders               Reminder[]
   schedules               Schedule[]
   transactions            Transaction[]
@@ -318,6 +320,7 @@ model Employee {
   cvFile               String?
   drivingLicenceFile   String?
   passportFile         String?
+  passportBackFile     String?
   policeLetterFile     String?
   profilePhoto         String?
   visaFile             String?
@@ -335,10 +338,22 @@ model Employee {
   salesforceId         String?
   activityLogs         ActivityLog[]      @relation("EmployeeActivityLogs")
   assignments          Assignment[]
+  internalNotes        InternalNote[]     @relation("EmployeeNotes")
   rejectionWarnings    RejectionWarning[]
   schedules            Schedule[]
   transactions         Transaction[]
   vacations            Vacation[]
+}
+
+model InternalNote {
+  id          String    @id @default(uuid())
+  text        String
+  author      String    @default("Admin")
+  userId      String?
+  employeeId  String?
+  createdAt   DateTime  @default(now())
+  user        User?     @relation("UserNotes", fields: [userId], references: [id])
+  employee    Employee? @relation("EmployeeNotes", fields: [employeeId], references: [id])
 }
 
 model Transaction {

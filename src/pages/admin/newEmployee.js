@@ -79,7 +79,7 @@ export default function NewEmployeePage() {
           <a
             href="/api/admin/export/employees"
             download
-            className="flex items-center gap-2 px-4 py-2 bg-[#0F1F38] text-white rounded-lg text-sm font-medium hover:bg-[#1a3050] transition"
+            className="flex items-center gap-2 px-4 py-2 bg-[#04436F] text-white rounded-lg text-sm font-medium hover:bg-[#033558] transition"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -98,7 +98,7 @@ export default function NewEmployeePage() {
                 placeholder="Vor- oder Nachname..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0F1F38]/20 focus:border-[#0F1F38]"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#04436F]/20 focus:border-[#04436F]"
               />
             </div>
             <div>
@@ -106,7 +106,7 @@ export default function NewEmployeePage() {
               <select
                 value={statusFilter}
                 onChange={e => setStatusFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0F1F38]/20 focus:border-[#0F1F38]"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#04436F]/20 focus:border-[#04436F]"
               >
                 <option value="all">Alle</option>
                 <option value="invited">Eingeladen</option>
@@ -119,7 +119,7 @@ export default function NewEmployeePage() {
                 type="date"
                 value={createdDate}
                 onChange={e => setCreatedDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0F1F38]/20 focus:border-[#0F1F38]"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#04436F]/20 focus:border-[#04436F]"
               />
             </div>
           </div>
@@ -186,7 +186,7 @@ export default function NewEmployeePage() {
                           )}
                           <button
                             onClick={() => router.push(`/admin/employees/${emp.id}`)}
-                            className="px-2.5 py-1 bg-[#0F1F38] text-white rounded-md text-xs font-medium hover:bg-[#1a3050] transition"
+                            className="px-2.5 py-1 bg-[#04436F] text-white rounded-md text-xs font-medium hover:bg-[#033558] transition"
                           >
                             Details
                           </button>
@@ -202,7 +202,7 @@ export default function NewEmployeePage() {
             <div className="px-4 py-3 border-t border-gray-100 text-center">
               <button
                 onClick={() => setVisibleCount(prev => prev + 20)}
-                className="px-4 py-1.5 text-sm text-[#0F1F38] font-medium hover:bg-gray-50 rounded-lg transition"
+                className="px-4 py-1.5 text-sm text-[#04436F] font-medium hover:bg-gray-50 rounded-lg transition"
               >
                 Mehr laden ({filteredEmployees.length - visibleCount} verbleibend)
               </button>
