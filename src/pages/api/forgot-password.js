@@ -12,8 +12,9 @@ export default async function handler(req, res) {
   const user = await prisma.user.findUnique({ where: { email } });
   const employee = !user ? await prisma.employee.findUnique({ where: { email } }) : null;
 
+  // Always return success to prevent email enumeration
   if (!user && !employee) {
-    return res.status(404).json({ message: "Email not found" });
+    return res.status(200).json({ success: true });
   }
 
   const resetToken = crypto.randomBytes(32).toString("hex");

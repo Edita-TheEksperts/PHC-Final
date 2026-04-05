@@ -30,7 +30,8 @@ export default async function handler(req, res) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    return res.status(200).json(user);
+    const { passwordHash, resetToken, resetTokenExpiry, ...safeUser } = user;
+    return res.status(200).json(safeUser);
   } catch (err) {
     return res.status(401).json({ message: "Token verification failed" });
   }
