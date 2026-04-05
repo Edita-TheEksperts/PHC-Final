@@ -94,6 +94,35 @@ try {
   emailWarning = "Mitarbeiter zugewiesen, aber E-Mail konnte nicht gesendet werden.";
 }
 
+// Notify the client that an employee has been assigned
+try {
+  await sendEmail({
+    to: user.email,
+    subject: "Ihr Betreuer wurde zugewiesen",
+    html: `
+<p>Hallo ${user.firstName} ${user.lastName}</p>
+
+<p>Wir freuen uns Ihnen mitzuteilen, dass Ihnen eine Betreuungsperson zugewiesen wurde:</p>
+
+<p><strong>${employee.firstName} ${employee.lastName}</strong></p>
+
+<p>Ihr nächster Termin ist in Ihrem Dashboard ersichtlich.</p>
+
+<p>
+  <a href="https://phc.ch/client-dashboard"
+     style="display:inline-block;padding:12px 20px;background:#B99B5F;color:white;border-radius:8px;text-decoration:none;font-weight:bold;">
+      Zum Dashboard
+  </a>
+</p>
+
+<br>
+<p>Freundliche Grüsse<br>Prime Home Care AG<br>Birkenstrasse 49<br>CH-6343 Rotkreuz<br>info@phc.ch<br>www.phc.ch</p>
+    `,
+  });
+} catch (clientMailError) {
+  // Don't fail if client email fails
+}
+
 
 return res.status(200).json({
   message: "Mitarbeiter wurde erfolgreich zugewiesen.",
