@@ -22,7 +22,7 @@ export default function ActiveClients({ clients }) {
     : filteredClients.slice(0, 5);
 
   return (
-    <div className="my-6 bg-white rounded-2xl shadow-md border">
+    <div>
       {/* Header */}
       <button
         onClick={() => setOpen(!open)}

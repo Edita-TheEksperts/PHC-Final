@@ -38,7 +38,7 @@ export default function AppointmentCalendar({ schedules }) {
   }
 
   return (
-    <div className="my-10 bg-white p-6 rounded-2xl shadow-md border border-gray-200">
+    <div>
       <style jsx>{`
         /* keep weekends normal (not red) */
         :global(.react-calendar__month-view__days__day--weekend) {
@@ -58,7 +58,7 @@ export default function AppointmentCalendar({ schedules }) {
         }
       `}</style>
 
-      <h2 className="text-2xl font-bold text-[#04436F] mb-4">Termine</h2>
+      {/* Title handled by parent */}
 
       <Calendar
         onChange={(date) => {
@@ -107,37 +107,41 @@ export default function AppointmentCalendar({ schedules }) {
       )}
 
       {isOpen && (
-        <div className="mt-6">
+        <div className="mt-4">
           {filteredAppointments.length === 0 ? (
-            <p className="text-sm text-gray-500">Keine Termine geplant.</p>
+            <p className="text-sm text-gray-400 italic">Keine Termine geplant.</p>
           ) : (
-            <ul className="mt-2 space-y-2">
+            <ul className="max-h-[400px] overflow-auto pr-1 space-y-2">
               {filteredAppointments.map((a) => (
                 <li
                   key={a.id}
-                  onClick={() => handleAppointmentClick(a.id)}
-                  className="cursor-pointer bg-gray-50 rounded-xl shadow-sm p-4 border border-gray-200 hover:bg-gray-100 transition-all"
+                  className="p-3 bg-gray-50 rounded-lg border border-gray-100 hover:border-gray-200 transition flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
                 >
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="font-semibold text-gray-800">
-                        👤 Client: {a.user?.firstName} {a.user?.lastName}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        Employee: {a.employee?.firstName || "—"}{" "}
-                        {a.employee?.lastName || ""}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {a.date ? formatDate(a.date) : "—"} — {a.startTime} ({a.hours}h)
-                      </p>
-                    </div>
-
+                  <div className="flex-1">
+                    <p onClick={() => handleAppointmentClick(a.id)} className="font-medium text-gray-900 text-sm hover:text-[#04436F] hover:underline cursor-pointer">
+                      {a.user?.firstName || "—"} {a.user?.lastName || ""}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {a.serviceName || a.subServiceName || "Service"} · {a.date ? formatDate(a.date) : `${a.day || ""} ${a.startTime || ""}`}
+                    </p>
+                    {a.employee ? (
+                      <p className="text-xs text-emerald-600 mt-0.5">{a.employee.firstName} {a.employee.lastName}</p>
+                    ) : (
+                      <p className="text-xs text-red-500 mt-0.5 font-medium">Kein Mitarbeiter zugewiesen</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`px-2 py-0.5 text-xs font-medium rounded-full border ${
+                      a.status === "cancelled" ? "bg-red-50 text-red-700 border-red-200" :
+                      a.status === "terminated" ? "bg-gray-100 text-gray-600 border-gray-200" :
+                      "bg-amber-50 text-amber-700 border-amber-200"
+                    }`}>{a.status || "active"}</span>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         router.push(`/appointments/${a.id}`);
                       }}
-                      className="text-xs bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700"
+                      className="text-xs bg-[#04436F] text-white px-3 py-1.5 rounded-lg hover:bg-[#033558] transition"
                     >
                       Details
                     </button>
