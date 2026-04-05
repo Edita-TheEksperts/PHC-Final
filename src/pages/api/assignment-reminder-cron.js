@@ -94,6 +94,14 @@ export async function runAssignmentReminders() {
           data: { confirmationStatus: "cancelled" }
         });
 
+        // Also clear employeeId from Schedule so it can be reassigned
+        if (a.scheduleId) {
+          await prisma.schedule.update({
+            where: { id: a.scheduleId },
+            data: { employeeId: null },
+          }).catch(() => {});
+        }
+
         const admins = await prisma.user.findMany({
           where: { role: "admin" }
         });

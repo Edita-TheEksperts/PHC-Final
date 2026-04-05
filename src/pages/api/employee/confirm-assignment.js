@@ -77,6 +77,14 @@ export default async function handler(req, res) {
     }
 
     if (action === "rejected") {
+      // Clear employeeId from Schedule so a new employee can be assigned
+      if (updated.scheduleId) {
+        await prisma.schedule.update({
+          where: { id: updated.scheduleId },
+          data: { employeeId: null },
+        }).catch(() => {});
+      }
+
       try {
         const employeeId = updated.employee.id;
 

@@ -51,11 +51,13 @@ export default async function handler(req, res) {
     // =======================
     const updated = await prisma.schedule.update({
       where: { id: Number(id) },
-      data: {
-        status: "cancelled",
-        // 👉 nëse më vonë shton cancelReason në model:
-        // cancelReason: cancelledBy,
-      },
+      data: { status: "cancelled" },
+    });
+
+    // Cancel related assignments so reminders stop firing
+    await prisma.assignment.updateMany({
+      where: { scheduleId: Number(id), confirmationStatus: { in: ["pending", "confirmed"] } },
+      data: { confirmationStatus: "cancelled", status: "cancelled" },
     });
 
     // =======================
