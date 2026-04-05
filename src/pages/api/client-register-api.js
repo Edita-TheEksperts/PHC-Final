@@ -189,7 +189,7 @@ const toStrAllowEmpty = (v) => {
       0
     );
 
-    const HOURLY_RATE = 1; // adjust if needed
+    const HOURLY_RATE = 59;
     const totalPayment = totalHours * HOURLY_RATE;
 
     /* --------------------------------------------------

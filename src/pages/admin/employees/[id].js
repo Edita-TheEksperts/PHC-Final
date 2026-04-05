@@ -391,7 +391,46 @@ const filteredTermine =
                 <InfoRow label="Ernährungserfahrung" value={Array.isArray(employee.dietaryExperience) && employee.dietaryExperience.length ? employee.dietaryExperience.join(", ") : "—"} />
               </InfoCard>
 
-              {/* Dokumente */}
+              {/* Dokumente senden */}
+              <InfoCard title="Dokumente senden" className="md:col-span-2">
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {[
+                    { type: "Auflösungschreiben", label: "Auflösungsschreiben", color: "bg-yellow-500 hover:bg-yellow-600" },
+                    { type: "KündigungMA", label: "Kündigung (ordentlich)", color: "bg-orange-500 hover:bg-orange-600" },
+                    { type: "KündigungMAFristlos", label: "Kündigung (fristlos)", color: "bg-red-500 hover:bg-red-600" },
+                  ].map((doc) => (
+                    <button
+                      key={doc.type}
+                      onClick={async () => {
+                        if (!confirm(`Wirklich "${doc.label}" an ${employee.email} senden?`)) return;
+                        try {
+                          const res = await fetch("/api/send-documents", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ employee: { id: employee.id }, documentType: doc.type }),
+                          });
+                          const data = await res.json();
+                          if (res.ok) {
+                            alert(`${doc.label} wurde erfolgreich gesendet.`);
+                          } else {
+                            alert(`Fehler: ${data.error || "Unbekannter Fehler"}`);
+                          }
+                        } catch {
+                          alert("Netzwerkfehler beim Senden des Dokuments.");
+                        }
+                      }}
+                      className={`px-4 py-2 text-white text-xs font-medium rounded-lg transition ${doc.color}`}
+                    >
+                      {doc.label} senden
+                    </button>
+                  ))}
+                </div>
+                {employee.documentStatus && employee.documentStatus !== "not_sent" && (
+                  <p className="text-xs text-gray-500 mb-3">Letztes gesendetes Dokument: <span className="font-medium">{employee.documentStatus}</span></p>
+                )}
+              </InfoCard>
+
+              {/* Hochgeladene Dateien */}
               <InfoCard title="Hochgeladene Dateien" className="md:col-span-2">
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-1">
                   {fileLinks.map((f) => (

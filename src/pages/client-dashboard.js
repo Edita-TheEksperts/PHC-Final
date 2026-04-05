@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 
 import { addDays, format } from "date-fns";
+import Holidays from "date-holidays";
 
 import { CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import {
@@ -116,17 +117,71 @@ const extraKm = Math.max(0, totalKm - contractedKm);
   const [form, setForm] = useState({
     date: null,
     time: "",
-    hours: 2, // default to 2 hours
-
-    service: "",
-    subService: "",
+    hours: 2,
+    services: [],      // multi-select service IDs
+    subServices: [],   // multi-select subservice IDs
+    service: "",       // kept for backward compat
+    subService: "",    // kept for backward compat
   });
+
+  const [bookingVoucher, setBookingVoucher] = useState("");
+  const [bookingVoucherResult, setBookingVoucherResult] = useState(null);
+  const [bookingVoucherLoading, setBookingVoucherLoading] = useState(false);
 
   const minSelectableDate = addDays(new Date(), 14);
 
-  // ✅ Always defined (or null)
+  // Holiday detection for surcharges
+  const hd = new Holidays("CH");
+  function isSwissHoliday(date) { return Boolean(hd.isHoliday(date)); }
+  function calculateHourlyCost(startDate, totalHours, baseRate) {
+    let cost = 0;
+    for (let i = 0; i < Math.floor(totalHours); i++) {
+      const hourDate = new Date(startDate);
+      hourDate.setHours(startDate.getHours() + i);
+      const h = hourDate.getHours();
+      let rate = baseRate;
+      if (hourDate.getDay() === 0 || isSwissHoliday(hourDate)) rate += baseRate * 0.5;
+      if (h >= 23 || h < 6) rate += baseRate * 0.25;
+      cost += rate;
+    }
+    const remainder = parseFloat((totalHours - Math.floor(totalHours)).toFixed(1));
+    if (remainder > 0) {
+      const hourDate = new Date(startDate);
+      hourDate.setHours(startDate.getHours() + Math.floor(totalHours));
+      const h = hourDate.getHours();
+      let rate = baseRate;
+      if (hourDate.getDay() === 0 || isSwissHoliday(hourDate)) rate += baseRate * 0.5;
+      if (h >= 23 || h < 6) rate += baseRate * 0.25;
+      cost += rate * remainder;
+    }
+    return Math.ceil(cost * 20) / 20;
+  }
+
+  // Calculate booking price with surcharges
+  const bookingPrice = (() => {
+    if (!form.date || !form.time) return form.hours * 59;
+    const [hh, mm] = (form.time || "08:00").split(":").map(Number);
+    const startDate = new Date(form.date);
+    startDate.setHours(hh, mm, 0, 0);
+    return calculateHourlyCost(startDate, form.hours, 59);
+  })();
+
+  // Apply voucher discount
+  const bookingFinalPrice = (() => {
+    if (!bookingVoucherResult?.success) return bookingPrice;
+    const v = bookingVoucherResult;
+    if (v.discountType === "percent") return Math.max(0, bookingPrice - (bookingPrice * v.discountValue) / 100);
+    if (v.discountType === "fixed") return Math.max(0, bookingPrice - v.discountValue);
+    return bookingPrice;
+  })();
+
+  // Selected services for display
+  const selectedServices = form.services.map(id => allServices.find(s => String(s.id) === String(id))).filter(Boolean);
+  const availableSubServices = selectedServices.flatMap(s => s.subServices || []);
+
+  // ✅ Always defined (or null) — backward compat
   const selectedService =
-    allServices.find((srv) => String(srv.id) === String(form.service)) || null;
+    allServices.find((srv) => String(srv.id) === String(form.service)) || selectedServices[0] || null;
 
   // --- DEBUG: Track form + services state
   useEffect(() => {}, [allServices]);
@@ -415,13 +470,12 @@ if (!token && step !== "done" && step !== "payment") {
   const handleBookingSubmit = async (e) => {
     e.preventDefault();
 
-    const service = allServices.find(
-      (s) => String(s.id) === String(form.service)
-    );
-    const subService =
-      service?.subServices.find(
-        (s) => String(s.id) === String(form.subService)
-      ) || null;
+    const serviceNames = selectedServices.map(s => s.name).join(", ");
+    const subServiceNames = form.subServices
+      .map(id => availableSubServices.find(s => String(s.id) === String(id)))
+      .filter(Boolean)
+      .map(s => s.name)
+      .join(", ");
 
     const payload = {
       userId: userData.id,
@@ -429,14 +483,12 @@ if (!token && step !== "done" && step !== "payment") {
       time: form.time,
       email: userData.email,
       hours: form.hours,
-      service: service?.name || null,
-      subService: subService?.name || null,
-      serviceId: service?.id || null,
-      subServiceId: subService?.id || null,
+      service: serviceNames || null,
+      subService: subServiceNames || null,
+      amount: bookingFinalPrice,
     };
 
     setPendingBooking(payload);
-    setStep("payment"); // 👉 go to payment screen
   };
 
   const stripe = useStripe();
@@ -451,11 +503,11 @@ if (!token && step !== "done" && step !== "payment") {
     }
 
     try {
-      // 1. Create PaymentIntent on backend
+      // 1. Create PaymentIntent on backend (use calculated price with surcharges + voucher)
       const res = await fetch("/api/create-payment-intent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: pendingBooking.hours * 5000 }), // 💰 e.g. 50 CHF per hour
+        body: JSON.stringify({ amount: Math.round((pendingBooking.amount || bookingFinalPrice) * 100) }),
       });
       const { clientSecret } = await res.json();
 
@@ -487,8 +539,11 @@ if (!token && step !== "done" && step !== "payment") {
 
       if (saveRes.ok) {
         alert("✅ Termin gebucht & Zahlung erfolgreich!");
-        setStep("done");
-        setForm({ date: "", time: "", hours: 2, service: "", subService: "" });
+        setPendingBooking(null);
+        setBookingVoucher("");
+        setBookingVoucherResult(null);
+        setForm({ date: null, time: "", hours: 2, service: "", subService: "", services: [], subServices: [] });
+        fetchAppointments(userData.id);
       } else {
         alert("❌ Fehler beim Speichern des Termins");
       }
@@ -1098,34 +1153,224 @@ await fetchAppointments(userId);
                 </div>
               </div>
 
-              {/* Neue Buchung */}
+              {/* Neue Buchung — Inline Form */}
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
                 <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
                   <div className="w-7 h-7 rounded-lg bg-[#B99B5F]/10 flex items-center justify-center">
                     <Clock className="w-4 h-4 text-[#B99B5F]" />
                   </div>
-                  <h3 className="text-sm font-bold text-gray-900">Neue Buchung</h3>
+                  <h3 className="text-sm font-bold text-gray-900">Neuen Termin buchen</h3>
                 </div>
-                <div className="p-6 flex flex-col items-center text-center gap-5">
-                  <div className="w-16 h-16 rounded-full bg-[#B99B5F]/10 flex items-center justify-center mt-2">
-                    <CalendarDays className="w-8 h-8 text-[#B99B5F]" />
-                  </div>
+                {!pendingBooking ? (
+                <form onSubmit={handleBookingSubmit} className="p-5 space-y-4">
+                  {/* Services — Multi-select checkboxes */}
                   <div>
-                    <p className="text-sm font-semibold text-gray-900">Neuen Termin buchen</p>
-                    <p className="text-xs text-gray-400 mt-1.5 max-w-xs leading-relaxed">
-                      Starten Sie eine neue Buchung über unser Anmeldeformular und wählen Sie Ihre gewünschten Leistungen, Termine und Zahlungsart.
-                    </p>
+                    <label className="block text-xs font-medium text-gray-500 mb-2">Dienstleistungen</label>
+                    <div className="space-y-1.5 max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-2">
+                      {allServices.map((s) => (
+                        <label key={s.id} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-gray-50 rounded px-1 py-0.5">
+                          <input
+                            type="checkbox"
+                            checked={form.services.includes(String(s.id))}
+                            onChange={(e) => {
+                              setForm((p) => {
+                                const svcId = String(s.id);
+                                const next = e.target.checked
+                                  ? [...p.services, svcId]
+                                  : p.services.filter((x) => x !== svcId);
+                                return { ...p, services: next, service: next[0] || "" };
+                              });
+                            }}
+                            className="rounded border-gray-300 text-[#B99B5F] focus:ring-[#B99B5F]"
+                          />
+                          <span>{s.name}</span>
+                        </label>
+                      ))}
+                    </div>
                   </div>
+
+                  {/* SubServices — Multi-select checkboxes */}
+                  {availableSubServices.length > 0 && (
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-2">Unterkategorien</label>
+                      <div className="space-y-1.5 max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-2">
+                        {availableSubServices.map((s) => (
+                          <label key={s.id} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-gray-50 rounded px-1 py-0.5">
+                            <input
+                              type="checkbox"
+                              checked={form.subServices.includes(String(s.id))}
+                              onChange={(e) => {
+                                setForm((p) => {
+                                  const subId = String(s.id);
+                                  const next = e.target.checked
+                                    ? [...p.subServices, subId]
+                                    : p.subServices.filter((x) => x !== subId);
+                                  return { ...p, subServices: next, subService: next[0] || "" };
+                                });
+                              }}
+                              className="rounded border-gray-300 text-[#B99B5F] focus:ring-[#B99B5F]"
+                            />
+                            <span>{s.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Date */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Datum</label>
+                    <DatePicker
+                      selected={form.date}
+                      onChange={(date) => setForm((p) => ({ ...p, date }))}
+                      minDate={minSelectableDate}
+                      dateFormat="dd.MM.yyyy"
+                      locale="de"
+                      placeholderText="Datum wählen"
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#B99B5F]/20 focus:border-[#B99B5F]"
+                      required
+                    />
+                  </div>
+
+                  {/* Time + Hours */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Uhrzeit</label>
+                      <input
+                        type="time"
+                        value={form.time}
+                        onChange={(e) => setForm((p) => ({ ...p, time: e.target.value }))}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#B99B5F]/20 focus:border-[#B99B5F]"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Stunden</label>
+                      <select
+                        value={form.hours}
+                        onChange={(e) => setForm((p) => ({ ...p, hours: Number(e.target.value) }))}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#B99B5F]/20 focus:border-[#B99B5F]"
+                      >
+                        {[1, 2, 3, 4, 5, 6, 7, 8].map((h) => (
+                          <option key={h} value={h}>{h} Std</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Price display with surcharge info */}
+                  <div className="bg-gray-50 rounded-lg p-3 text-center">
+                    <p className="text-xs text-gray-400">Betrag (inkl. Zuschläge)</p>
+                    <p className="text-lg font-bold text-[#B99B5F]">CHF {bookingPrice.toFixed(2)}</p>
+                    {form.date && form.time && (() => {
+                      const [hh] = (form.time || "08:00").split(":").map(Number);
+                      const isNight = hh >= 23 || hh < 6;
+                      const isSunHol = form.date.getDay() === 0 || isSwissHoliday(form.date);
+                      if (!isNight && !isSunHol) return null;
+                      return (
+                        <p className="text-xs text-gray-400 mt-1">
+                          {isSunHol && "Sonntag/Feiertag +50% "}
+                          {isNight && "Nachtzuschlag +25%"}
+                        </p>
+                      );
+                    })()}
+                  </div>
+
                   <button
-                    onClick={() => {
-                      if (userData?.id) sessionStorage.setItem("userId", userData.id);
-                      router.push("/register-client");
-                    }}
-                    className="w-full bg-[#B99B5F] text-white py-3 rounded-xl text-sm font-semibold hover:bg-[#a78a50] transition"
+                    type="submit"
+                    disabled={form.services.length === 0}
+                    className="w-full bg-[#B99B5F] text-white py-3 rounded-xl text-sm font-semibold hover:bg-[#a78a50] transition disabled:opacity-50"
                   >
-                    Jetzt buchen
+                    Weiter zur Zahlung
                   </button>
-                </div>
+                </form>
+                ) : (
+                  /* Payment step */
+                  <div className="p-5 space-y-4">
+                    {/* Summary */}
+                    <div className="bg-gray-50 rounded-lg p-3 space-y-1 text-sm">
+                      <p><span className="text-gray-400">Service:</span> {pendingBooking.service}</p>
+                      {pendingBooking.subService && <p><span className="text-gray-400">Unterkategorie:</span> {pendingBooking.subService}</p>}
+                      <p><span className="text-gray-400">Datum:</span> {new Date(pendingBooking.date).toLocaleDateString("de-DE")}</p>
+                      <p><span className="text-gray-400">Zeit:</span> {pendingBooking.time} Uhr, {form.hours} Std</p>
+                      <p className="font-bold text-[#B99B5F] pt-1">CHF {bookingFinalPrice.toFixed(2)}</p>
+                    </div>
+
+                    {/* Voucher */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Gutscheincode (optional)</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={bookingVoucher}
+                          onChange={(e) => setBookingVoucher(e.target.value)}
+                          placeholder="Code eingeben"
+                          className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                        />
+                        <button
+                          type="button"
+                          disabled={bookingVoucherLoading || !bookingVoucher.trim()}
+                          onClick={async () => {
+                            setBookingVoucherLoading(true);
+                            setBookingVoucherResult(null);
+                            try {
+                              const r = await fetch("/api/vouchers/validate", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ code: bookingVoucher.trim() }),
+                              });
+                              const d = await r.json();
+                              setBookingVoucherResult(r.ok ? { success: true, ...d } : { success: false, error: d.error || "Ungültiger Code" });
+                            } catch { setBookingVoucherResult({ success: false, error: "Netzwerkfehler" }); }
+                            finally { setBookingVoucherLoading(false); }
+                          }}
+                          className="px-4 py-2 bg-[#B99B5F] text-white text-sm rounded-lg hover:bg-[#a78a50] disabled:opacity-50"
+                        >
+                          {bookingVoucherLoading ? "..." : "Einlösen"}
+                        </button>
+                      </div>
+                      {bookingVoucherResult && (
+                        <p className={`text-xs mt-1 ${bookingVoucherResult.success ? "text-green-600" : "text-red-500"}`}>
+                          {bookingVoucherResult.success
+                            ? `Gutschein angewendet: ${bookingVoucherResult.discountType === "percent" ? bookingVoucherResult.discountValue + "%" : "CHF " + bookingVoucherResult.discountValue} Rabatt`
+                            : bookingVoucherResult.error}
+                        </p>
+                      )}
+                      {bookingVoucherResult?.success && bookingFinalPrice !== bookingPrice && (
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          <span className="line-through">CHF {bookingPrice.toFixed(2)}</span> → <span className="font-bold text-[#B99B5F]">CHF {bookingFinalPrice.toFixed(2)}</span>
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Card */}
+                    <div className="border border-gray-200 rounded-lg p-3">
+                      <CardElement options={{ style: { base: { fontSize: "14px" } } }} />
+                    </div>
+
+                    {/* AGB */}
+                    <label className="flex items-start gap-2 text-xs text-gray-500">
+                      <input type="checkbox" checked={agbAccepted} onChange={(e) => { setAgbAccepted(e.target.checked); setAgbError(""); }} className="mt-0.5" />
+                      <span>Ich akzeptiere die <a href="/AVB" target="_blank" className="underline text-[#04436F]">AGB</a></span>
+                    </label>
+                    {agbError && <p className="text-xs text-red-500">{agbError}</p>}
+
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => { setPendingBooking(null); setBookingVoucherResult(null); setBookingVoucher(""); }}
+                        className="flex-1 py-3 border border-gray-200 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-50 transition"
+                      >
+                        Zurück
+                      </button>
+                      <button
+                        onClick={handleStripePayment}
+                        className="flex-1 bg-[#04436F] text-white py-3 rounded-xl text-sm font-semibold hover:bg-[#033558] transition"
+                      >
+                        Jetzt bezahlen
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1488,7 +1733,7 @@ await fetchAppointments(userId);
                     </div>
                     <div className="bg-[#B99B5F]/5 rounded-xl p-3 border border-[#B99B5F]/10">
                       <p className="text-xs text-gray-400 mb-1 font-medium">Betrag</p>
-                      <p className="font-bold text-[#B99B5F]">CHF {((selectedAppointment.hours || 0) * 50).toFixed(2)}</p>
+                      <p className="font-bold text-[#B99B5F]">CHF {(userData?.frequency === "einmalig" && userData?.totalPayment ? userData.totalPayment : (selectedAppointment.hours || 0) * 59).toFixed(2)}</p>
                     </div>
                   </div>
                   {(selectedAppointment.serviceName || clientDetails?.services?.length > 0) && (
@@ -1570,7 +1815,7 @@ await fetchAppointments(userId);
       {/* ── CANCEL CONFIRMATION MODAL ── */}
       {cancelConfirm && (() => {
         const refund = getRefundInfo(cancelConfirm.date);
-        const amount = (cancelConfirm.hours || 0) * 50;
+        const amount = userData?.frequency === "einmalig" && userData?.totalPayment ? userData.totalPayment : (cancelConfirm.hours || 0) * 59;
         const refundAmount = (amount * refund.pct) / 100;
         return (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-50 p-4">

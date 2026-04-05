@@ -33,7 +33,7 @@ export default async function handler(req, res) {
     const passwordHash = await hash(finalPassword, 10);
 
     const totalHours = schedules.reduce((sum, s) => sum + (parseFloat(s.hours) || 0), 0);
-    const totalPayment = totalHours * 1;
+    const totalPayment = totalHours * 59;
 
     const user = await prisma.user.create({
       data: {
@@ -71,7 +71,7 @@ export default async function handler(req, res) {
             day: s.day,
             startTime: s.startTime,
             hours: parseFloat(s.hours),
-            date: parsedDate,
+            date: s.date ? new Date(s.date) : parsedDate,
           }))
         }
       }

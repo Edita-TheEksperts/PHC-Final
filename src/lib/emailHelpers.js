@@ -51,7 +51,7 @@ export async function sendAssignmentContractEmail(assignment) {
     html: `
       <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width:600px; margin:auto; border:1px solid #eee; border-radius:8px;">
         <div style="padding:24px 24px 0 24px; text-align:center;">
-          <img src='https://www.phc.ch/phc-logo.png' alt='Prime Home Care Logo' style='max-width:180px; margin-bottom:16px;' />
+          <img src='cid:phclogo' alt='Prime Home Care Logo' style='max-width:180px; margin-bottom:16px;' />
         </div>
         <div style="padding:24px;">
           <p>Hallo ${employee.firstName}</p>
@@ -70,6 +70,7 @@ export async function sendAssignmentContractEmail(assignment) {
     `,
     attachments: [
       { filename: `Einsatz-Arbeitsvertrag_${employee.firstName}_${employee.lastName}.pdf`, content: contractBuffer },
+      { filename: "phc_logo.png", path: path.join(process.cwd(), "public/images/phc_logo.png"), cid: "phclogo" },
     ],
   });
 }
@@ -87,7 +88,7 @@ export async function createContractPdf(employee) {
     } catch (e) {
       // Logo not added
     }
-    doc.moveDown(2);
+    doc.moveDown(3);
     const buffers = [];
     doc.on("data", buffers.push.bind(buffers));
     doc.on("end", () => resolve(Buffer.concat(buffers)));
@@ -105,9 +106,14 @@ export async function createContractPdf(employee) {
     doc.moveDown(2);
     doc.text("zwischen");
     doc.moveDown(1);
-    doc.text("Prime Home Care AG, Birkenstrasse 49, 6343 Rotkreuz\tArbeitgeberin");
+    const pageW = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+    const labelW = 100;
+    const textW = pageW - labelW;
+    doc.text("Prime Home Care AG, Birkenstrasse 49, 6343 Rotkreuz", doc.page.margins.left, doc.y, { width: textW, continued: true });
+    doc.text("Arbeitgeberin", { width: labelW, align: "right" });
     doc.moveDown(1);
-    doc.text(`und ${fullName}, ${fullAddress}\tArbeitnehmer`);
+    doc.text(`und ${fullName}, ${fullAddress}`, doc.page.margins.left, doc.y, { width: textW, continued: true });
+    doc.text("Arbeitnehmer", { width: labelW, align: "right" });
     doc.moveDown(2);
     doc.text("Betreffend gelegentliche Arbeitsleistungen in unechter Arbeit auf Abruf evtl. Teilzeitarbeit.");
     doc.moveDown(1);
@@ -133,7 +139,8 @@ export async function createContractPdf(employee) {
     doc.text("Überstunden ab 43. Wochenstunde dürfen nur auf ausdrückliche Anordnung der Arbeitgeberin hin geleistet werden. Mehrstunden innerhalb der Grenzen von 42 Wochenstunden werden mit Freizeit von gleicher Dauer kompensiert oder in Ausnahmefällen ohne Zuschlag ausbezahlt.");
     doc.moveDown(1);
     doc.text("6. Lohn");
-    doc.text("Der Stundengrundlohn beträgt\tCHF 25.00");
+    const hourlyRate = employee.hourlyRate || 30;
+    doc.text(`Der Stundengrundlohn beträgt\tCHF ${hourlyRate.toFixed(2)}`);
     doc.text("Zusätzliche Ferienentschädigung\t8.33%/10.64%");
     doc.text("Anteil 13. Monatslohn\t8.33%");
     doc.text("Die Auszahlung des Lohnes erfolgt monatlich, jeweils bis zum 5. des Nachfolgemonats.");
@@ -180,10 +187,6 @@ export async function createContractPdf(employee) {
     const labelY = lineY + 5;
     doc.font("Helvetica").fontSize(12).text("Arbeitgeberin", sigLeftX, labelY, { width: lineWidth, align: "center" });
     doc.font("Helvetica").fontSize(12).text("Arbeitnehmer", sigRightX, labelY, { width: lineWidth, align: "center" });
-    // Footer with AVB and Nutzungsbedingungen links
-    const footerY = doc.page.height - 60;
-    doc.fontSize(10).fillColor('#04436F').text('AVB', 50, footerY, { link: 'https://phc.ch/AVB', underline: true });
-    doc.fontSize(10).fillColor('#04436F').text('Nutzungsbedingungen', 120, footerY, { link: 'https://phc.ch/nutzungsbedingungen', underline: true });
     doc.end();
   });
 }

@@ -218,24 +218,8 @@ export default async function handler(req, res) {
     }
   }
 
-  // 🕓 Update schedules
-  if (schedules?.length) {
-    try {
-      await prisma.schedule.deleteMany({ where: { userId } });
-      await prisma.schedule.createMany({
-        data: schedules.map((s) => ({
-          userId,
-          day: s.day,
-          startTime: s.startTime,
-          hours: Number(s.hours),
-          serviceName: s.serviceName || null,
-          subServiceName: s.subServiceName || null,
-        })),
-      });
-    } catch (error) {
-      // still continue
-    }
-  }
+  // 🕓 Schedules are already created by register-user-prepayment or client-register-api
+  // Do NOT delete and recreate them here — that would lose the dates and service names
 
   // Send welcome email once at step 4 completion (prevent duplicates via welcomeEmailSent flag)
   try {
