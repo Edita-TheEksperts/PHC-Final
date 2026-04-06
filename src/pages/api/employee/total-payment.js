@@ -23,7 +23,9 @@ export default async function handler(req, res) {
       (s) =>
         s.date &&
         new Date(s.date) >= firstDay &&
-        new Date(s.date) <= lastDay
+        new Date(s.date) <= lastDay &&
+        s.status !== "cancelled" &&
+        s.status !== "terminated"
     );
 
     const serviceHours = schedules.reduce((sum, s) => sum + (s.hours || 0), 0);

@@ -1251,8 +1251,8 @@ await fetchAppointments(userId);
                         onChange={(e) => setForm((p) => ({ ...p, hours: Number(e.target.value) }))}
                         className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#B99B5F]/20 focus:border-[#B99B5F]"
                       >
-                        {[1, 2, 3, 4, 5, 6, 7, 8].map((h) => (
-                          <option key={h} value={h}>{h} Std</option>
+                        {[2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8].map((h) => (
+                          <option key={h} value={h}>{h % 1 === 0 ? `${h} Std` : `${h} Std`}</option>
                         ))}
                       </select>
                     </div>

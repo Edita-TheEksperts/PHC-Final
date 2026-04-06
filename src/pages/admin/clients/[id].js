@@ -1,5 +1,5 @@
 // pages/admin/clients/[id].jsx
-import { useEffect, useMemo, useState, memo } from "react";
+import { useEffect, useMemo, useState, memo, useCallback } from "react";
 
 import { useRouter } from "next/router";
 
@@ -17,7 +17,10 @@ function StatusSetter({ type, id, currentStatus, onUpdated }) {
     try {
       const res = await fetch("/api/admin/set-status", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("userToken")}`,
+        },
         body: JSON.stringify({ type, id, status }),
       });
       const data = await res.json();
@@ -494,9 +497,25 @@ lastName: "Nachname (zu betreuende Person)",
     );
   }
 
+  // Fields that should be Ja/Nein dropdowns (matching registration form)
+  const JA_NEIN_FIELDS = new Set([
+    "careHasParking", "hasAllergies", "hasTech", "mentalSupportNeeded",
+    "shoppingWithClient", "reading", "cardGames", "companionship",
+    "companionshipSupport", "allergyCheck", "jointCooking",
+  ]);
+
+  // Fields that should be dropdowns with specific options
+  const SELECT_OPTIONS = {
+    physicalState: ["Vollständig mobil", "Teilweise mobil", "Stark eingeschränkt", "Bettlägerig"],
+    cooking: ["Ja, alleine", "Ja, mit Hilfe", "Nein"],
+    transportOption: ["Eigenes Auto", "ÖV", "Begleitung nötig", "Nicht mobil"],
+  };
+
   function inferFieldType(key, value) {
     if (typeof value === "boolean") return "boolean";
     if (typeof value === "number") return "number";
+    if (JA_NEIN_FIELDS.has(key)) return "janein";
+    if (SELECT_OPTIONS[key]) return "select";
     return "string";
   }
 
@@ -538,13 +557,45 @@ const InputField = memo(function InputField({ fieldKey, value }) {
     );
   }
 
+  if (type === "janein") {
+    return (
+      <select
+        key={fieldKey}
+        className="w-full max-w-[420px] border rounded-lg px-3 py-2 text-gray-900"
+        defaultValue={formData[fieldKey] ?? ""}
+        onChange={(e) => setFormData((p) => ({ ...p, [fieldKey]: e.target.value }))}
+      >
+        <option value="">— Bitte auswählen —</option>
+        <option value="Ja">Ja</option>
+        <option value="Nein">Nein</option>
+      </select>
+    );
+  }
+
+  if (type === "select") {
+    return (
+      <select
+        key={fieldKey}
+        className="w-full max-w-[420px] border rounded-lg px-3 py-2 text-gray-900"
+        defaultValue={formData[fieldKey] ?? ""}
+        onChange={(e) => setFormData((p) => ({ ...p, [fieldKey]: e.target.value }))}
+      >
+        <option value="">— Bitte auswählen —</option>
+        {SELECT_OPTIONS[fieldKey].map((opt) => (
+          <option key={opt} value={opt}>{opt}</option>
+        ))}
+      </select>
+    );
+  }
+
   if (type === "number") {
     return (
       <input
+        key={fieldKey}
         type="number"
         className="w-full max-w-[420px] border rounded-lg px-3 py-2 text-gray-900"
-        value={formData[fieldKey] ?? ""}
-        onChange={(e) =>
+        defaultValue={formData[fieldKey] ?? ""}
+        onBlur={(e) =>
           setFormData((p) => ({
             ...p,
             [fieldKey]: e.target.value === "" ? null : Number(e.target.value),
@@ -557,9 +608,10 @@ const InputField = memo(function InputField({ fieldKey, value }) {
   if (isLongText(fieldKey)) {
     return (
       <textarea
+        key={fieldKey}
         className="w-full border rounded-lg px-3 py-2 text-gray-900 min-h-[90px]"
-        value={formData[fieldKey] ?? ""}
-        onChange={(e) =>
+        defaultValue={formData[fieldKey] ?? ""}
+        onBlur={(e) =>
           setFormData((p) => ({ ...p, [fieldKey]: e.target.value }))
         }
       />
@@ -568,10 +620,11 @@ const InputField = memo(function InputField({ fieldKey, value }) {
 
   return (
     <input
+      key={fieldKey}
       type="text"
       className="w-full max-w-[520px] border rounded-lg px-3 py-2 text-gray-900"
-      value={formData[fieldKey] ?? ""}
-      onChange={(e) =>
+      defaultValue={formData[fieldKey] ?? ""}
+      onBlur={(e) =>
         setFormData((p) => ({ ...p, [fieldKey]: e.target.value }))
       }
     />
@@ -603,7 +656,10 @@ const InputField = memo(function InputField({ fieldKey, value }) {
     try {
       const res = await fetch(`/api/clients/${id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("userToken")}`,
+        },
         body: JSON.stringify(formData),
       });
 
@@ -807,16 +863,14 @@ const QUESTIONNAIRE_SECTIONS = useMemo(
     });
   }, [allClientFields, questionnaireUsedKeys]);
 
-  function FieldRow({ label, fieldKey }) {
-    return (
-      <li className="grid grid-cols-1 sm:grid-cols-[240px_1fr] gap-2 sm:gap-6 items-start">
-        <strong className="text-gray-700">{label}</strong>
-        <div className="flex justify-end min-w-0">
-          <InputField fieldKey={fieldKey} value={mergedClient?.[fieldKey]} />
-        </div>
-      </li>
-    );
-  }
+  const FieldRow = useCallback(({ label, fieldKey }) => (
+    <li className="grid grid-cols-1 sm:grid-cols-[240px_1fr] gap-2 sm:gap-6 items-start">
+      <strong className="text-gray-700">{label}</strong>
+      <div className="flex justify-end min-w-0">
+        <InputField fieldKey={fieldKey} value={mergedClient?.[fieldKey]} />
+      </div>
+    </li>
+  ), [mergedClient, isEditing]);
 
   // =========================================================
   // ✅ RETURNS LAST

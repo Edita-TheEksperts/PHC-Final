@@ -13,6 +13,24 @@ export default function Einsaetze() {
 
   const [assignMsg, setAssignMsg] = useState({ type: "", text: "" });
   const [assignLoading, setAssignLoading] = useState(false);
+  const [recommendations, setRecommendations] = useState([]);
+  const [recsLoaded, setRecsLoaded] = useState(false);
+
+  // Fetch matchmaking when an unassigned schedule is selected
+  useEffect(() => {
+    if (!selectedItem?.user?.id || selectedItem?.employee) {
+      setRecommendations([]);
+      setRecsLoaded(false);
+      return;
+    }
+    setRecsLoaded(false);
+    fetch(`/api/admin/matchmaking?clientId=${selectedItem.user.id}`, {
+      headers: { "Authorization": `Bearer ${localStorage.getItem("userToken")}` }
+    })
+      .then(r => r.json())
+      .then(d => { setRecommendations(Array.isArray(d) ? d.slice(0, 3) : []); setRecsLoaded(true); })
+      .catch(() => { setRecommendations([]); setRecsLoaded(true); });
+  }, [selectedItem?.id]);
 
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -80,7 +98,7 @@ export default function Einsaetze() {
     try {
       const res = await fetch(`/api/admin/schedules/${editItem.id}/edit`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem("userToken")}` },
         body: JSON.stringify(editItem),
       });
       const updated = await res.json();
@@ -100,37 +118,41 @@ export default function Einsaetze() {
     } catch {}
   };
 
-  const assignEmployeeToSchedule = async () => {
-    if (!selectedItem?.id || !selectedItem?.employeeId) {
+  const assignEmployeeToSchedule = async (empId) => {
+    const employeeId = empId || selectedItem?.employeeId;
+    if (!selectedItem?.id || !employeeId) {
       setAssignMsg({ type: "error", text: "Bitte Mitarbeiter auswählen!" });
       return;
     }
     setAssignLoading(true);
     setAssignMsg({ type: "", text: "" });
     try {
+      const payload = {
+        appointmentId: Number(selectedItem.id),
+        userId: String(selectedItem.user?.id || ""),
+        employeeId: String(employeeId),
+      };
       const res = await fetch("/api/admin/assign-employee", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ appointmentId: selectedItem.id, userId: selectedItem.user?.id, employeeId: selectedItem.employeeId }),
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem("userToken")}` },
+        body: JSON.stringify(payload),
       });
       const updatedSchedule = await res.json();
       if (!res.ok) {
-        setAssignMsg({ type: "error", text: updatedSchedule.message || "Assign fehlgeschlagen" });
+        setAssignMsg({ type: "error", text: updatedSchedule.message || updatedSchedule.error || `Fehler (${res.status})` });
         return;
       }
-      setData((prev) => {
-        const newData = { ...prev };
-        for (const key of Object.keys(newData)) {
-          if (Array.isArray(newData[key])) {
-            newData[key] = newData[key].map((s) => s.id === updatedSchedule.id ? updatedSchedule : s);
-          }
-        }
-        return newData;
-      });
-      setSelectedItem(updatedSchedule);
       setAssignMsg({ type: "success", text: "Mitarbeiter wurde zugewiesen." });
-    } catch {
-      setAssignMsg({ type: "error", text: "Serverfehler beim Zuweisen." });
+      // Refetch all data to get updated relations
+      try {
+        const freshRes = await fetch("/api/einsaetze");
+        const freshData = await freshRes.json();
+        setData(freshData);
+      } catch {}
+      setSelectedItem(null);
+    } catch (err) {
+      console.error("[Einsaetze] Assign error:", err);
+      setAssignMsg({ type: "error", text: err.message || "Serverfehler beim Zuweisen." });
     } finally {
       setAssignLoading(false);
     }
@@ -154,7 +176,7 @@ export default function Einsaetze() {
   useEffect(() => {
     async function fetchServices() {
       try {
-        const res = await fetch("/api/admin/services");
+        const res = await fetch("/api/admin/services", { headers: { "Authorization": `Bearer ${localStorage.getItem("userToken")}` } });
         const data = await res.json();
         setAllServices(Array.isArray(data) ? data : []);
       } catch { setAllServices([]); }
@@ -165,7 +187,7 @@ export default function Einsaetze() {
   useEffect(() => {
     async function fetchEmployees() {
       try {
-        const res = await fetch("/api/admin/employees");
+        const res = await fetch("/api/admin/employees", { headers: { "Authorization": `Bearer ${localStorage.getItem("userToken")}` } });
         const employees = await res.json();
         const safe = Array.isArray(employees) ? employees : [];
         setAllEmployees(safe.filter((e) => isAcceptedStatus(e.status)));
@@ -212,7 +234,9 @@ export default function Einsaetze() {
             {list.map((item) => (
               <tr
                 key={item.id}
-                onClick={() => { setSelectedItem(item); setAssignMsg({ type: "", text: "" }); setAssignLoading(false); }}
+                onClick={() => {
+                  setSelectedItem(item); setAssignMsg({ type: "", text: "" }); setAssignLoading(false); setRecommendations([]);
+                }}
                 className={`cursor-pointer transition hover:bg-gray-50 ${item.status === "storniert" || item.status === "cancelled" ? "opacity-60" : ""}`}
               >
                 <td className="px-4 py-3 text-sm text-gray-900">{formatDate(item.date)}</td>
@@ -388,6 +412,34 @@ export default function Einsaetze() {
 
             {!selectedItem.employee && (
               <div className="mt-4 border-t border-gray-100 pt-4">
+                {/* Matchmaking recommendations */}
+                <div className="mb-3">
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Empfohlene Mitarbeiter</p>
+                  {!recsLoaded && <p className="text-xs text-gray-400 italic">Lade Empfehlungen...</p>}
+                  {recsLoaded && recommendations.length === 0 && <p className="text-xs text-amber-600 italic">Keine passenden Empfehlungen gefunden.</p>}
+                  {recommendations.length > 0 && (
+                    <div className="space-y-1.5">
+                      {recommendations.map((r) => (
+                        <div key={r.employeeId} className="flex items-center justify-between p-2 bg-emerald-50 border border-emerald-200 rounded-lg">
+                          <div>
+                            <span className="text-sm font-medium text-emerald-900">{r.firstName} {r.lastName}</span>
+                            <span className="ml-2 text-xs text-emerald-600">({r.score}%)</span>
+                            {r.reasons?.length > 0 && <p className="text-xs text-emerald-600 mt-0.5">{r.reasons.join(" · ")}</p>}
+                          </div>
+                          <button
+                            onClick={() => {
+                              setSelectedItem((prev) => ({ ...prev, employeeId: r.employeeId }));
+                              assignEmployeeToSchedule(r.employeeId);
+                            }}
+                            className="text-xs px-3 py-1 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 transition"
+                          >
+                            Zuweisen
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Mitarbeiter zuweisen</p>
                 <select
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#04436F]/20 focus:border-[#04436F]"
@@ -400,7 +452,7 @@ export default function Einsaetze() {
                   ))}
                 </select>
                 <button
-                  onClick={assignEmployeeToSchedule}
+                  onClick={() => assignEmployeeToSchedule()}
                   disabled={!selectedItem.employeeId || assignLoading}
                   className="mt-3 w-full bg-[#04436F] hover:bg-[#033558] text-white py-2 rounded-lg text-sm disabled:bg-gray-200 disabled:text-gray-400 transition"
                 >
@@ -436,14 +488,12 @@ export default function Einsaetze() {
               <input className="border border-gray-200 p-2.5 rounded-lg w-full text-sm" type="date" value={editItem.date?.split("T")[0] || ""} onChange={(e) => setEditItem({ ...editItem, date: e.target.value })} />
               <input className="border border-gray-200 p-2.5 rounded-lg w-full text-sm" type="time" value={editItem.startTime || ""} onChange={(e) => setEditItem({ ...editItem, startTime: e.target.value })} />
               <input className="border border-gray-200 p-2.5 rounded-lg w-full text-sm" type="number" placeholder="Stunden" value={editItem.hours || ""} onChange={(e) => setEditItem({ ...editItem, hours: e.target.value })} />
-              <select className="border border-gray-200 p-2.5 rounded-lg w-full text-sm" value={editItem.serviceName || ""} onChange={(e) => setEditItem({ ...editItem, serviceName: e.target.value, subServiceName: "" })}>
-                <option value="">Service auswählen</option>
-                {allServices.map((service) => <option key={service.id} value={service.name}>{service.name}</option>)}
-              </select>
-              <select className="border border-gray-200 p-2.5 rounded-lg w-full text-sm" value={editItem.subServiceName || ""} onChange={(e) => setEditItem({ ...editItem, subServiceName: e.target.value })}>
-                <option value="">Unterdienst auswählen</option>
-                {allServices.find((s) => s.name === editItem.serviceName)?.subServices?.map((sub) => <option key={sub.id} value={sub.name}>{sub.name}</option>)}
-              </select>
+              <div className="bg-gray-50 border border-gray-200 p-2.5 rounded-lg w-full text-sm text-gray-700">
+                <span className="text-xs text-gray-400">Service: </span>{editItem.serviceName || "—"}
+              </div>
+              <div className="bg-gray-50 border border-gray-200 p-2.5 rounded-lg w-full text-sm text-gray-700">
+                <span className="text-xs text-gray-400">Unterdienst: </span>{editItem.subServiceName || "—"}
+              </div>
             </div>
             <div className="flex gap-3 mt-5">
               <button onClick={() => setEditItem(null)} className="flex-1 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-100 transition">Abbrechen</button>

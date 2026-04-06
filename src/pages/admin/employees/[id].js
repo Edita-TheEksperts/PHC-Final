@@ -68,12 +68,17 @@ const [editAvailability, setEditAvailability] = useState(false);
 
 const [personalData, setPersonalData] = useState({});
 const [addressData, setAddressData] = useState({});
+const [editServices, setEditServices] = useState(false);
+const [servicesData, setServicesData] = useState({});
+const [editConditions, setEditConditions] = useState(false);
+const [conditionsData, setConditionsData] = useState({});
+const [editSkills, setEditSkills] = useState(false);
+const [skillsData, setSkillsData] = useState({});
 const [availabilityData, setAvailabilityData] = useState({});
 const [editLicense, setEditLicense] = useState(false);
 const [licenseData, setLicenseData] = useState({});
 
-const [editSkills, setEditSkills] = useState(false);
-const [skillsData, setSkillsData] = useState({});
+
 const [einsatzFilter, setEinsatzFilter] = useState("all");
 const [noteText, setNoteText] = useState("");
 const [notes, setNotes] = useState([]);
@@ -217,6 +222,54 @@ async function savePersonal() {
   const updated = await res.json();
   setEmployee(updated);
   setEditPersonal(false);
+}
+
+async function saveServices() {
+  const payload = {
+    servicesOffered: typeof servicesData.servicesOffered === "string"
+      ? servicesData.servicesOffered.split(",").map(s => s.trim()).filter(Boolean)
+      : servicesData.servicesOffered || [],
+    specialTrainings: typeof servicesData.specialTrainings === "string"
+      ? servicesData.specialTrainings.split(",").map(s => s.trim()).filter(Boolean)
+      : servicesData.specialTrainings || [],
+  };
+  const res = await fetch(`/api/admin/employee/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const updated = await res.json();
+  setEmployee(updated);
+  setEditServices(false);
+}
+
+async function saveConditions() {
+  const res = await fetch(`/api/admin/employee/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(conditionsData),
+  });
+  const updated = await res.json();
+  setEmployee(updated);
+  setEditConditions(false);
+}
+
+async function saveSkills() {
+  const toArr = (v) => typeof v === "string" ? v.split(",").map(s => s.trim()).filter(Boolean) : v || [];
+  const payload = {
+    languages: toArr(skillsData.languages),
+    languageOther: skillsData.languageOther || "",
+    communicationTraits: toArr(skillsData.communicationTraits),
+    dietaryExperience: toArr(skillsData.dietaryExperience),
+  };
+  const res = await fetch(`/api/admin/employee/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const updated = await res.json();
+  setEmployee(updated);
+  setEditSkills(false);
 }
 
 async function saveChanges() {
@@ -374,24 +427,74 @@ const filteredTermine =
 
               {/* Verfügbarkeit */}
               <InfoCard
-                title="Verfügbarkeit & Erfahrung"
+                title="Verfügbarkeit"
                 onEdit={() => {
-                  setAvailabilityData({ availabilityFrom: employee.availabilityFrom, availabilityDays: (employee.availabilityDays || []).join(", "), experienceYears: employee.experienceYears, experienceWhere: employee.experienceWhere, experienceCompany: employee.experienceCompany });
+                  setAvailabilityData({ availabilityFrom: employee.availabilityFrom, availabilityDays: (employee.availabilityDays || []).join(", ") });
                   setEditAvailability(true);
                 }}
               >
                 <InfoRow label="Verfügbar ab" value={formatDate(employee.availabilityFrom)} />
                 <InfoRow label="Tage" value={(employee.availabilityDays || []).join(", ")} />
-                <InfoRow label="Jahre Erfahrung" value={employee.experienceYears} />
-                <InfoRow label="Erfahrungsort" value={employee.experienceWhere} />
-                <InfoRow label="Unternehmen" value={employee.experienceCompany} />
               </InfoCard>
 
-              {/* Fähigkeiten */}
-              <InfoCard title="Fähigkeiten & Sprachen">
+              {/* Angebotene Dienstleistungen */}
+              <InfoCard title="Dienstleistungen" className="md:col-span-2" onEdit={() => {
+                setServicesData({
+                  servicesOffered: (employee.servicesOffered || []).join(", "),
+                  specialTrainings: (employee.specialTrainings || []).join(", "),
+                });
+                setEditServices(true);
+              }}>
+                <InfoRow label="Angebotene Services" value={Array.isArray(employee.servicesOffered) && employee.servicesOffered.length ? employee.servicesOffered.join(", ") : "—"} />
+                <InfoRow label="Spezialausbildungen" value={Array.isArray(employee.specialTrainings) && employee.specialTrainings.length ? employee.specialTrainings.join(", ") : "—"} />
+              </InfoCard>
+
+              {/* Fähigkeiten & Sprachen */}
+              <InfoCard title="Fähigkeiten & Sprachen" onEdit={() => {
+                setSkillsData({
+                  languages: (employee.languages || []).join(", "),
+                  languageOther: employee.languageOther || "",
+                  communicationTraits: (employee.communicationTraits || []).join(", "),
+                  dietaryExperience: (employee.dietaryExperience || []).join(", "),
+                });
+                setEditSkills(true);
+              }}>
                 <InfoRow label="Sprachen" value={Array.isArray(employee.languages) && employee.languages.length ? employee.languages.join(", ") : "—"} />
+                <InfoRow label="Weitere Sprache" value={employee.languageOther} />
                 <InfoRow label="Kommunikation" value={Array.isArray(employee.communicationTraits) && employee.communicationTraits.length ? employee.communicationTraits.join(", ") : "—"} />
                 <InfoRow label="Ernährungserfahrung" value={Array.isArray(employee.dietaryExperience) && employee.dietaryExperience.length ? employee.dietaryExperience.join(", ") : "—"} />
+              </InfoCard>
+
+              {/* Arbeitsbedingungen */}
+              <InfoCard title="Arbeitsbedingungen" onEdit={() => {
+                setConditionsData({
+                  hasLicense: employee.hasLicense, licenseType: employee.licenseType || "",
+                  hasCar: employee.hasCar || "", carAvailableForWork: employee.carAvailableForWork || "",
+                  smoker: employee.smoker || "", onCallAvailable: employee.onCallAvailable || "",
+                  nightShifts: employee.nightShifts || "", travelSupport: employee.travelSupport || "",
+                  bodyCareSupport: employee.bodyCareSupport || "", worksWithAnimals: employee.worksWithAnimals || "",
+                  desiredWeeklyHours: employee.desiredWeeklyHours || "", howFarCanYouTravel: employee.howFarCanYouTravel || "",
+                });
+                setEditConditions(true);
+              }}>
+                <InfoRow label="Führerschein" value={employee.hasLicense ? "Ja" : "Nein"} />
+                <InfoRow label="Führerscheintyp" value={employee.licenseType} />
+                <InfoRow label="Auto vorhanden" value={employee.hasCar} />
+                <InfoRow label="Auto für Arbeit" value={employee.carAvailableForWork} />
+                <InfoRow label="Raucher" value={employee.smoker} />
+                <InfoRow label="Bereitschaftsdienst" value={employee.onCallAvailable} />
+                <InfoRow label="Nachtschichten" value={employee.nightShifts} />
+                <InfoRow label="Reisebegleitung" value={employee.travelSupport} />
+                <InfoRow label="Körperpflege" value={employee.bodyCareSupport} />
+                <InfoRow label="Arbeitet mit Tieren" value={employee.worksWithAnimals} />
+                <InfoRow label="Gewünschte Wochenstunden" value={employee.desiredWeeklyHours} />
+                <InfoRow label="Reisebereitschaft" value={employee.howFarCanYouTravel} />
+              </InfoCard>
+
+              {/* Aufenthaltserlaubnis */}
+              <InfoCard title="Aufenthalt & Sonstiges">
+                <InfoRow label="Aufenthaltsbewilligung" value={employee.residencePermit} />
+                <InfoRow label="Wie erfahren" value={employee.howDidYouHearAboutUs} />
               </InfoCard>
 
               {/* Dokumente senden */}
@@ -732,9 +835,10 @@ const filteredTermine =
         </div>
       )}
 
-      {editAvailability && <EditModal title="Verfügbarkeit & Erfahrung" data={availabilityData} onChange={setAvailabilityData} onSave={saveAvailability} onClose={() => setEditAvailability(false)} />}
-      {editLicense     && <EditModal title="Führerschein & Fahrzeug"   data={licenseData}     onChange={setLicenseData}     onSave={saveLicenseCar}  onClose={() => setEditLicense(false)} />}
-      {editSkills      && <EditModal title="Schulungen & Sprachen"     data={skillsData}      onChange={setSkillsData}      onSave={saveSkills}      onClose={() => setEditSkills(false)} />}
+      {editAvailability && <EditModal title="Verfügbarkeit" data={availabilityData} onChange={setAvailabilityData} onSave={saveAvailability} onClose={() => setEditAvailability(false)} />}
+      {editServices    && <EditModal title="Dienstleistungen"          data={servicesData}    onChange={setServicesData}    onSave={saveServices}    onClose={() => setEditServices(false)} />}
+      {editSkills      && <EditModal title="Fähigkeiten & Sprachen"    data={skillsData}      onChange={setSkillsData}      onSave={saveSkills}      onClose={() => setEditSkills(false)} />}
+      {editConditions  && <EditModal title="Arbeitsbedingungen"        data={conditionsData}  onChange={setConditionsData}  onSave={saveConditions}  onClose={() => setEditConditions(false)} />}
     </div>
   );
 }
@@ -764,29 +868,48 @@ function InfoRow({ label, value }) {
   );
 }
 
+const FIELD_LABELS_DE = {
+  email: "E-Mail", phone: "Telefon", salutation: "Anrede", firstName: "Vorname", lastName: "Nachname",
+  address: "Adresse", houseNumber: "Hausnummer", zipCode: "PLZ", city: "Stadt", country: "Land",
+  canton: "Kanton", nationality: "Nationalität", residencePermit: "Aufenthaltsbewilligung",
+  availabilityFrom: "Verfügbar ab", availabilityDays: "Verfügbare Tage",
+  experienceYears: "Jahre Erfahrung", experienceWhere: "Erfahrungsort", experienceCompany: "Unternehmen",
+  hasLicense: "Führerschein", licenseType: "Führerscheintyp", hasCar: "Auto vorhanden",
+  carAvailableForWork: "Auto für Arbeit", smoker: "Raucher", onCallAvailable: "Bereitschaftsdienst",
+  nightShifts: "Nachtschichten", travelSupport: "Reisebegleitung", bodyCareSupport: "Körperpflege",
+  worksWithAnimals: "Arbeitet mit Tieren", desiredWeeklyHours: "Gewünschte Wochenstunden",
+  howFarCanYouTravel: "Reisebereitschaft", howDidYouHearAboutUs: "Wie erfahren",
+  languages: "Sprachen", languageOther: "Weitere Sprache",
+  communicationTraits: "Kommunikation", dietaryExperience: "Ernährungserfahrung",
+  servicesOffered: "Angebotene Services", specialTrainings: "Spezialausbildungen",
+};
+
 function EditModal({ title, data, onChange, onSave, onClose }) {
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl w-full max-w-md shadow-xl">
+      <div className="bg-white rounded-xl w-full max-w-md shadow-xl max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <h2 className="text-base font-semibold text-gray-900">{title}</h2>
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 text-gray-400">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
-        <div className="p-6 space-y-3">
-          {Object.keys(data).map((key) => (
-            <div key={key}>
-              <label className="block text-xs font-medium text-gray-500 mb-1 capitalize">{key}</label>
-              <input
-                name={key}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#04436F]/20"
-                value={data[key] || ""}
-                onChange={(e) => onChange({ ...data, [key]: e.target.value })}
-                placeholder={key}
-              />
-            </div>
-          ))}
+        <div className="p-6 space-y-3 overflow-y-auto">
+          {Object.keys(data).map((key) => {
+            const label = FIELD_LABELS_DE[key] || key.replace(/([A-Z])/g, " $1").replace(/^./, c => c.toUpperCase());
+            return (
+              <div key={key}>
+                <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
+                <input
+                  name={key}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#04436F]/20"
+                  value={data[key] ?? ""}
+                  onChange={(e) => onChange({ ...data, [key]: e.target.value })}
+                  placeholder={label}
+                />
+              </div>
+            );
+          })}
         </div>
         <div className="flex gap-3 px-6 py-4 border-t border-gray-100">
           <button onClick={onClose} className="flex-1 py-2 text-sm font-medium border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition">Abbrechen</button>

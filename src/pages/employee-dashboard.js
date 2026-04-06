@@ -162,7 +162,6 @@ export default function EmployeeDashboard() {
     { label: "Ausstehend", value: pendingAssignments.length, border: "border-l-amber-400", tab: "pending" },
     { label: "Einsätze", value: confirmedAssignments.length, border: "border-l-emerald-400", tab: "confirmed" },
     { label: "Urlaub", value: vacations.length, border: "border-l-blue-400", tab: "vacation" },
-    { label: "Verdienst (Monat)", value: t ? `CHF ${t.total ?? 0}` : "—", border: "border-l-purple-400", tab: null },
   ];
 
   return (

@@ -1761,14 +1761,6 @@ const handlePayment = async () => {
           {step === 1 && (
             <>
               <h2 className="text-2xl font-bold text-black">Wie oft & wann?</h2>
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-gray-700">
-                <p className="font-semibold text-amber-800 mb-1">Kostenzuschläge</p>
-                <ul className="space-y-1">
-                  <li>• Sonntagszuschlag: <strong>+50%</strong> (Sonntage &amp; gesetzliche Feiertage)</li>
-                  <li>• Nachtzuschlag: <strong>+25%</strong> (23:00–06:00 Uhr)</li>
-                </ul>
-                <p className="mt-1 text-xs text-gray-500">Feiertage: Neujahrstag, Karfreitag, Ostermontag, Auffahrt, Pfingstmontag, Bundesfeiertag, Weihnachtstag, Stephanstag</p>
-              </div>
               <div className="space-y-4">
               <div ref={frequencyRef} className="space-y-2">
                   <p className="font-medium">
@@ -3989,6 +3981,15 @@ onChange={(date) => {
       </p>
     );
   })}
+
+  <div className="bg-amber-50 border border-amber-200 rounded-md p-3 mt-2">
+    <p className="text-xs font-semibold text-amber-800 mb-1">Kostenzuschläge</p>
+    <ul className="text-xs text-gray-700 space-y-0.5">
+      <li>• Sonntagszuschlag: <strong>+50%</strong> (Sonntage &amp; gesetzliche Feiertage)</li>
+      <li>• Nachtzuschlag: <strong>+25%</strong> (23:00–06:00 Uhr)</li>
+    </ul>
+    <p className="mt-1 text-[10px] text-gray-500">Feiertage: Neujahrstag, Karfreitag, Ostermontag, Auffahrt, Pfingstmontag, Bundesfeiertag, Weihnachtstag, Stephanstag</p>
+  </div>
 
   <p className="mt-2 font-semibold text-gray-900">
     Gesamtsumme: {totalPayment.toFixed(2)} CHF

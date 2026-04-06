@@ -7,6 +7,10 @@ const fileFields = ["cvFile", "profilePhoto", "passportFile", "passportBackFile"
 const hiddenFields = [
   "id", "password", "passwordHash", "salesforceId",
   "createdAt", "updatedAt", "resetToken", "resetTokenExpiry",
+  "documentStatus", "invited", "inviteSentAt", "approvedAt",
+  "experienceYears", "experienceWhere", "experienceCompany",
+  "weekendReady", "nightShiftFrequency",
+  "status", "smoker", "desiredWeeklyHours", "hasAllergies",
 ];
 
 function formatLabel(key) {
@@ -55,12 +59,15 @@ function formatValue(value) {
 }
 
 const BASE_GROUPS = [
-  { label: "Persönliche Informationen", keys: ["salutation", "firstName", "lastName", "email", "phone", "nationality", "residencePermit", "canton", "zipCode", "city", "address", "houseNumber", "country"] },
+  { label: "Persönliche Informationen", keys: ["salutation", "firstName", "lastName", "email", "phone"] },
+  { label: "Adresse & Nationalität", keys: ["address", "houseNumber", "zipCode", "city", "canton", "country", "nationality", "residencePermit"] },
   { label: "Bankdaten", keys: ["iban", "accountHolder", "bankName", "bic"] },
-  { label: "Erreichbarkeit & Verfügbarkeit", keys: ["availabilityFrom", "availabilityDays", "desiredWeeklyHours", "onCallAvailable"] },
-  { label: "Sprachen & Kommunikation", keys: ["languages", "languageOther", "communicationTraits"] },
+  { label: "Verfügbarkeit", keys: ["availabilityFrom", "availabilityDays", "onCallAvailable"] },
+  { label: "Angebotene Dienstleistungen", keys: ["servicesOffered", "specialTrainings"] },
+  { label: "Sprachen & Kommunikation", keys: ["languages", "languageOther", "communicationTraits", "dietaryExperience"] },
   { label: "Führerschein & Mobilität", keys: ["hasLicense", "licenseType", "hasCar", "carAvailableForWork", "howFarCanYouTravel"] },
-  { label: "Einsatzrelevante Fähigkeiten", keys: ["bodyCareSupport", "nightShifts", "nightShiftFrequency", "worksWithAnimals", "hasAllergies", "dietaryExperience"] },
+  { label: "Einsatzrelevante Fähigkeiten", keys: ["bodyCareSupport", "nightShifts", "travelSupport", "worksWithAnimals"] },
+  { label: "Sonstiges", keys: ["howDidYouHearAboutUs"] },
   { label: "Dokumente & Nachweise", keys: ["cvFile", "profilePhoto", "passportFile", "passportBackFile", "visaFile", "drivingLicenceFile", "policeLetterFile", "certificateFile"] },
 ];
 
@@ -152,11 +159,8 @@ export default function EmployeeInfo() {
   // Build grouped entries — no module-level mutation
   const allKeys = Object.keys(formData).filter(k => !hiddenFields.includes(k));
   const usedKeys = new Set(BASE_GROUPS.flatMap(g => g.keys));
-  const sonstigesKeys = allKeys.filter(k => !usedKeys.has(k) && !fileFields.includes(k));
-  const allGroups = [
-    ...BASE_GROUPS,
-    ...(sonstigesKeys.length > 0 ? [{ label: "Sonstiges", keys: sonstigesKeys }] : []),
-  ];
+  // Only show fields that are in defined groups — no catch-all
+  const allGroups = [...BASE_GROUPS];
   const fieldGroups = viewTab === "dokumente"
     ? allGroups.filter(g => g.label === "Dokumente & Nachweise")
     : allGroups.filter(g => g.label !== "Dokumente & Nachweise");
