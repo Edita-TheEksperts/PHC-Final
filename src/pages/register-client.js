@@ -2758,42 +2758,6 @@ onChange={(date) => {
                     </div>
                   </div>
 <div className="mb-8">
-  <h4 className="font-[600] text-[16px] mb-4">Zu betreuende Person</h4>
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-    <div className="mb-2">
-      <label className="block font-medium mb-1">Vorname</label>
-      <input
-        name="careFirstName"
-        placeholder="Vorname"
-        value={form.careFirstName || ""}
-        onChange={handleChange}
-        className={inputClass}
-      />
-    </div>
-    <div className="mb-2">
-      <label className="block font-medium mb-1">Nachname</label>
-      <input
-        name="careLastName"
-        placeholder="Nachname"
-        value={form.careLastName || ""}
-        onChange={handleChange}
-        className={inputClass}
-      />
-    </div>
-    <div className="mb-2">
-      <label className="block font-medium mb-1">Telefonnummer</label>
-      <input
-        name="carePhone"
-        placeholder="z. B. +41 79 000 00 00"
-        value={form.carePhone || ""}
-        onChange={handleChange}
-        className={inputClass}
-      />
-    </div>
-  </div>
-</div>
-
-<div className="mb-8">
   <h4 className="font-[600] text-[16px] mb-2">Anfragende Person</h4>
   <div className="mb-4">
     <label className="inline-flex items-center gap-2 text-sm text-gray-800">
