@@ -13,6 +13,7 @@ export default async function handler(req, res) {
   if (!iban) missingFields.push("iban");
   if (!accountHolder) missingFields.push("accountHolder");
   if (!bankName) missingFields.push("bankName");
+  if (!bic) missingFields.push("bic");
 
   // If any are missing, return 400 with details
   if (missingFields.length > 0) {
@@ -29,7 +30,8 @@ export default async function handler(req, res) {
         iban,
         accountHolder,
         bankName,
-        bic: bic || null, // optional
+        bic,
+        bankUpdatedAt: new Date(),
       },
     });
 

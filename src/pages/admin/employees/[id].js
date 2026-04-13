@@ -1,5 +1,6 @@
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
+import { SELECT_FIELDS, MARITAL_STATUSES } from "../../../lib/formOptions";
 
 const EMPLOYEE_STATUSES = ["pending", "approved", "rejected", "inaktiv"];
 
@@ -81,6 +82,8 @@ const [licenseData, setLicenseData] = useState({});
 
 const [einsatzFilter, setEinsatzFilter] = useState("all");
 const [noteText, setNoteText] = useState("");
+const [noteType, setNoteType] = useState("note");
+const [noteDueDate, setNoteDueDate] = useState("");
 const [notes, setNotes] = useState([]);
 const [notesLoaded, setNotesLoaded] = useState(false);
 const [activeTab, setActiveTab] = useState("profil");
@@ -101,7 +104,18 @@ const [avgRating, setAvgRating] = useState(null);
       try {
         const res = await fetch(`/api/admin/notes?employeeId=${id}`);
         const data = await res.json();
-        setNotes(data.notes || []);
+        const list = data.notes || [];
+        setNotes(list);
+        // Auto-mark unread employee messages as read by admin
+        list
+          .filter(n => n.author !== "Admin" && n.readByAdmin === false)
+          .forEach(n => {
+            fetch("/api/admin/notes", {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ id: n.id, readByAdmin: true }),
+            }).catch(() => {});
+          });
       } catch { setNotes([]); }
       setNotesLoaded(true);
     }
@@ -118,9 +132,9 @@ const [avgRating, setAvgRating] = useState(null);
     fetchFeedback();
   }, [id]);
 
-  if (!employee) return <p className="p-6 text-gray-600">Loading...</p>;
+  if (!employee) return <p className="p-6 text-gray-600">Wird geladen...</p>;
 // === AFTER employee is loaded ===
-if (!employee) return <p className="p-6 text-gray-600">Loading...</p>;
+if (!employee) return <p className="p-6 text-gray-600">Wird geladen...</p>;
 
 const filteredAssignments =
   einsatzFilter === "all"
@@ -492,9 +506,17 @@ const filteredTermine =
               </InfoCard>
 
               {/* Aufenthaltserlaubnis */}
-              <InfoCard title="Aufenthalt & Sonstiges">
+              <InfoCard title="Aufenthalt">
                 <InfoRow label="Aufenthaltsbewilligung" value={employee.residencePermit} />
-                <InfoRow label="Wie erfahren" value={employee.howDidYouHearAboutUs} />
+              </InfoCard>
+
+              {/* Persönliche Angaben (Finanzen) */}
+              <InfoCard title="Persönliche Angaben">
+                <InfoRow label="Geburtsdatum" value={employee.birthDate ? new Date(employee.birthDate).toLocaleDateString("de-CH") : null} />
+                <InfoRow label="Zivilstand" value={employee.maritalStatus} />
+                <InfoRow label="AHV-Nummer" value={employee.ahvNumber} />
+                <InfoRow label="Kinder" value={employee.hasChildren === true ? "Ja" : employee.hasChildren === false ? "Nein" : null} />
+                <InfoRow label="Bankdaten zuletzt geändert" value={employee.bankUpdatedAt ? new Date(employee.bankUpdatedAt).toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : null} />
               </InfoCard>
 
               {/* Dokumente senden */}
@@ -645,14 +667,14 @@ const filteredTermine =
               <div className="space-y-2">
                 {filteredTermine?.length > 0 ? filteredTermine.map(a => (
                   <div key={a.id} className="flex items-start justify-between p-4 bg-gray-50 rounded-lg border border-gray-100">
-                    <div className="space-y-1">
+                    <div className="space-y-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900">Kunde: {a.user?.firstName} {a.user?.lastName}</p>
                       <p className="text-xs text-gray-500">
-                        {new Date(a.date).toLocaleDateString("de-DE")} · {a.startTime} · {a.hours}h
+                        {new Date(a.date).toLocaleDateString("de-DE")} · {a.startTime} · {a.hours}h · {a.kilometers || 0} km
                       </p>
                       {a.user?.services?.length > 0 && <p className="text-xs text-gray-500">{a.user.services.map(s => s.name).join(", ")}</p>}
                     </div>
-                    <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full border
+                    <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full border flex-shrink-0
                       ${a.status === "completed" ? "bg-green-100 text-green-700 border-green-200"
                       : a.status === "cancelled" ? "bg-red-100 text-red-700 border-red-200"
                       : "bg-yellow-100 text-yellow-700 border-yellow-200"}`}>
@@ -697,12 +719,35 @@ const filteredTermine =
           <div className="bg-gray-50 rounded-xl border border-gray-100 p-5">
             <h3 className="text-sm font-semibold text-gray-900 mb-3">Interne Notizen (Admin-only)</h3>
             <p className="text-xs text-gray-400 mb-3">Nicht sichtbar für Mitarbeiter</p>
+
+            {/* Note type selector */}
+            <div className="flex gap-2 mb-3">
+              <button type="button" onClick={() => setNoteType("note")}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${noteType === "note" ? "bg-[#04436F] text-white border-[#04436F]" : "bg-white text-gray-600 border-gray-200"}`}>
+                Nur Notiz
+              </button>
+              <button type="button" onClick={() => setNoteType("task")}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${noteType === "task" ? "bg-[#04436F] text-white border-[#04436F]" : "bg-white text-gray-600 border-gray-200"}`}>
+                Aufgabe
+              </button>
+            </div>
+
             <textarea
               value={noteText}
               onChange={(e) => setNoteText(e.target.value)}
               placeholder="Notiz hinzufügen..."
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm min-h-[80px] focus:outline-none focus:ring-2 focus:ring-[#04436F]/20"
             />
+
+            {/* Due date for tasks */}
+            {noteType === "task" && (
+              <div className="mt-2">
+                <label className="block text-xs font-medium text-gray-500 mb-1">Zu erledigen bis:</label>
+                <input type="date" value={noteDueDate} onChange={(e) => setNoteDueDate(e.target.value)}
+                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#04436F]/20 w-full" />
+              </div>
+            )}
+
             <button
               onClick={async () => {
                 if (!noteText.trim()) return;
@@ -710,12 +755,20 @@ const filteredTermine =
                   const res = await fetch("/api/admin/notes", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ text: noteText, employeeId: employee.id, author: "Admin" }),
+                    body: JSON.stringify({
+                      text: noteText,
+                      employeeId: employee.id,
+                      author: "Admin",
+                      noteType,
+                      ...(noteType === "task" && noteDueDate ? { dueDate: noteDueDate } : {}),
+                    }),
                   });
                   if (res.ok) {
                     const note = await res.json();
                     setNotes(prev => [note, ...prev]);
                     setNoteText("");
+                    setNoteDueDate("");
+                    setNoteType("note");
                   }
                 } catch {}
               }}
@@ -728,12 +781,45 @@ const filteredTermine =
             {notes.length === 0 ? (
               <p className="text-sm text-gray-400 text-center py-4">Keine Notizen vorhanden</p>
             ) : notes.map((n) => (
-              <div key={n.id || n.createdAt} className="bg-white border border-gray-200 rounded-lg p-4">
+              <div key={n.id || n.createdAt} className={`border rounded-lg p-4 ${n.noteType === "task" && !n.completed ? "bg-amber-50 border-amber-200" : "bg-white border-gray-200"}`}>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-medium text-gray-500">{n.author}</span>
-                  <span className="text-xs text-gray-400">{new Date(n.createdAt).toLocaleDateString("de-CH")} {new Date(n.createdAt).toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" })}</span>
+                  <div className="flex items-center gap-2">
+                    {n.noteType === "task" && (
+                      <button
+                        onClick={async () => {
+                          try {
+                            const res = await fetch("/api/admin/notes", {
+                              method: "PATCH",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ id: n.id, completed: !n.completed }),
+                            });
+                            if (res.ok) {
+                              setNotes(prev => prev.map(note => note.id === n.id ? { ...note, completed: !n.completed } : note));
+                            }
+                          } catch {}
+                        }}
+                        className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${n.completed ? "bg-emerald-500 border-emerald-500" : "border-gray-300"}`}
+                      >
+                        {n.completed && <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                      </button>
+                    )}
+                    <span className="text-xs font-medium text-gray-500">{n.author}</span>
+                    {n.noteType === "task" && (
+                      <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${n.completed ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                        {n.completed ? "Erledigt" : "Aufgabe"}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {n.dueDate && (
+                      <span className={`text-[10px] font-medium ${new Date(n.dueDate) < new Date() && !n.completed ? "text-red-600" : "text-gray-400"}`}>
+                        Fällig: {new Date(n.dueDate).toLocaleDateString("de-CH")}
+                      </span>
+                    )}
+                    <span className="text-xs text-gray-400">{new Date(n.createdAt).toLocaleDateString("de-CH")} {new Date(n.createdAt).toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" })}</span>
+                  </div>
                 </div>
-                <p className="text-sm text-gray-800">{n.text}</p>
+                <p className={`text-sm ${n.completed ? "text-gray-400 line-through" : "text-gray-800"}`}>{n.text}</p>
               </div>
             ))}
           </div>
@@ -878,7 +964,8 @@ const FIELD_LABELS_DE = {
   carAvailableForWork: "Auto für Arbeit", smoker: "Raucher", onCallAvailable: "Bereitschaftsdienst",
   nightShifts: "Nachtschichten", travelSupport: "Reisebegleitung", bodyCareSupport: "Körperpflege",
   worksWithAnimals: "Arbeitet mit Tieren", desiredWeeklyHours: "Gewünschte Wochenstunden",
-  howFarCanYouTravel: "Reisebereitschaft", howDidYouHearAboutUs: "Wie erfahren",
+  howFarCanYouTravel: "Reisebereitschaft",
+  birthDate: "Geburtsdatum", maritalStatus: "Zivilstand", ahvNumber: "AHV-Nummer", hasChildren: "Kinder",
   languages: "Sprachen", languageOther: "Weitere Sprache",
   communicationTraits: "Kommunikation", dietaryExperience: "Ernährungserfahrung",
   servicesOffered: "Angebotene Services", specialTrainings: "Spezialausbildungen",
@@ -897,12 +984,59 @@ function EditModal({ title, data, onChange, onSave, onClose }) {
         <div className="p-6 space-y-3 overflow-y-auto">
           {Object.keys(data).map((key) => {
             const label = FIELD_LABELS_DE[key] || key.replace(/([A-Z])/g, " $1").replace(/^./, c => c.toUpperCase());
+            const inputCls = "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#04436F]/20";
+            const options = SELECT_FIELDS[key];
+            if (options) {
+              return (
+                <div key={key}>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
+                  <select
+                    name={key}
+                    className={inputCls}
+                    value={data[key] ?? ""}
+                    onChange={(e) => onChange({ ...data, [key]: e.target.value })}
+                  >
+                    <option value="">Bitte wählen</option>
+                    {options.map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                </div>
+              );
+            }
+            if (key === "hasChildren") {
+              const v = data[key];
+              const selectVal = v === true ? "yes" : v === false ? "no" : "";
+              return (
+                <div key={key}>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
+                  <select
+                    name={key}
+                    className={inputCls}
+                    value={selectVal}
+                    onChange={(e) => onChange({ ...data, [key]: e.target.value === "yes" ? true : e.target.value === "no" ? false : null })}
+                  >
+                    <option value="">Bitte wählen</option>
+                    <option value="yes">Ja</option>
+                    <option value="no">Nein</option>
+                  </select>
+                </div>
+              );
+            }
+            if (key === "birthDate") {
+              const v = data[key] ? new Date(data[key]).toISOString().slice(0, 10) : "";
+              return (
+                <div key={key}>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
+                  <input type="date" name={key} className={inputCls} value={v}
+                    onChange={(e) => onChange({ ...data, [key]: e.target.value || null })} />
+                </div>
+              );
+            }
             return (
               <div key={key}>
                 <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
                 <input
                   name={key}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#04436F]/20"
+                  className={inputCls}
                   value={data[key] ?? ""}
                   onChange={(e) => onChange({ ...data, [key]: e.target.value })}
                   placeholder={label}

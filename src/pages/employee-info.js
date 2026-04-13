@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import EmployeeLayout from "../components/EmployeeLayout";
+import { SELECT_FIELDS } from "../lib/formOptions";
 
 const fileFields = ["cvFile", "profilePhoto", "passportFile", "passportBackFile", "visaFile", "drivingLicenceFile", "policeLetterFile", "certificateFile"];
 
@@ -67,7 +68,6 @@ const BASE_GROUPS = [
   { label: "Sprachen & Kommunikation", keys: ["languages", "languageOther", "communicationTraits", "dietaryExperience"] },
   { label: "Führerschein & Mobilität", keys: ["hasLicense", "licenseType", "hasCar", "carAvailableForWork", "howFarCanYouTravel"] },
   { label: "Einsatzrelevante Fähigkeiten", keys: ["bodyCareSupport", "nightShifts", "travelSupport", "worksWithAnimals"] },
-  { label: "Sonstiges", keys: ["howDidYouHearAboutUs"] },
   { label: "Dokumente & Nachweise", keys: ["cvFile", "profilePhoto", "passportFile", "passportBackFile", "visaFile", "drivingLicenceFile", "policeLetterFile", "certificateFile"] },
 ];
 
@@ -239,11 +239,19 @@ export default function EmployeeInfo() {
 
                     {fileFields.includes(key) ? (
                       editMode ? (
-                        <input
-                          type="file"
-                          onChange={e => handleFileUpload(e.target.files[0], key)}
-                          className="w-full text-sm text-gray-600 border border-gray-200 rounded-lg px-3 py-2 file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-[#04436F] file:text-white hover:file:bg-[#033558] transition"
-                        />
+                        <label className="flex items-center gap-3 w-full border border-gray-200 rounded-lg px-3 py-2 cursor-pointer hover:border-[#04436F] transition">
+                          <span className="inline-flex items-center px-3 py-1 rounded-md text-xs font-medium bg-[#04436F] text-white hover:bg-[#033558]">
+                            Datei auswählen
+                          </span>
+                          <span className="text-sm text-gray-500 truncate">
+                            {value ? (typeof value === "string" ? value.split("/").pop() : "Datei ausgewählt") : "Keine Datei ausgewählt"}
+                          </span>
+                          <input
+                            type="file"
+                            onChange={e => handleFileUpload(e.target.files[0], key)}
+                            className="sr-only"
+                          />
+                        </label>
                       ) : value ? (
                         <a
                           href={value}
@@ -260,16 +268,27 @@ export default function EmployeeInfo() {
                         <span className="text-sm text-gray-400">Keine Datei</span>
                       )
                     ) : editMode ? (
-                      <input
-                        className={inputCls}
-                        value={Array.isArray(value) ? value.join(", ") : value ?? ""}
-                        onChange={e => setFormData(prev => ({
-                          ...prev,
-                          [key]: Array.isArray(prev[key])
-                            ? e.target.value.split(",").map(v => v.trim())
-                            : e.target.value,
-                        }))}
-                      />
+                      SELECT_FIELDS[key] ? (
+                        <select
+                          className={inputCls}
+                          value={value ?? ""}
+                          onChange={e => setFormData(prev => ({ ...prev, [key]: e.target.value }))}
+                        >
+                          <option value="">Bitte wählen</option>
+                          {SELECT_FIELDS[key].map(o => <option key={o} value={o}>{o}</option>)}
+                        </select>
+                      ) : (
+                        <input
+                          className={inputCls}
+                          value={Array.isArray(value) ? value.join(", ") : value ?? ""}
+                          onChange={e => setFormData(prev => ({
+                            ...prev,
+                            [key]: Array.isArray(prev[key])
+                              ? e.target.value.split(",").map(v => v.trim())
+                              : e.target.value,
+                          }))}
+                        />
+                      )
                     ) : (
                       <div className="px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 min-h-[38px]">
                         {formatValue(value)}

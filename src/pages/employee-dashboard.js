@@ -21,6 +21,8 @@ export default function EmployeeDashboard() {
   const [nachrichtType, setNachrichtType] = useState("Nachricht an PHC");
   const [nachrichtSending, setNachrichtSending] = useState(false);
   const [nachrichtFeedback, setNachrichtFeedback] = useState(null);
+  const [sentMessages, setSentMessages] = useState([]);
+  const [detailsOpen, setDetailsOpen] = useState(null);
   const router = useRouter();
 
   // Handle tab from URL query
@@ -67,6 +69,14 @@ export default function EmployeeDashboard() {
       setConfirmedAssignments(confirmed);
       setPaymentTotals(totals);
     });
+
+    // Load sent messages (excluding admin task entries)
+    if (employeeData?.id) {
+      fetch(`/api/admin/notes?employeeId=${employeeData.id}&messagesOnly=true`)
+        .then(r => r.json())
+        .then(d => setSentMessages(d.notes || []))
+        .catch(() => {});
+    }
   }, [employeeData]);
 
   const handleVacationSave = async () => {
@@ -369,19 +379,75 @@ export default function EmployeeDashboard() {
                       <div key={a.id} className="border border-gray-200 rounded-xl p-5 space-y-4">
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <p className="font-semibold text-gray-900">{a.user.firstName} {a.user.lastName}</p>
-                            <p className="text-sm text-gray-500">{a.user.email}</p>
+                            <p className="font-semibold text-gray-900">Neuer Einsatz</p>
+                            <p className="text-sm text-gray-500">{a.user?.services?.map(s => s.name).join(", ") || "—"}</p>
                           </div>
                           <span className="flex-shrink-0 text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 rounded-full px-2.5 py-1">
                             Ausstehend
                           </span>
                         </div>
-                        <div className="flex items-start gap-2.5 p-3 bg-blue-50 border border-blue-100 rounded-lg">
-                          <svg className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 18a9 9 0 100-18 9 9 0 000 18z" />
-                          </svg>
-                          <p className="text-xs text-blue-700">Beim Kunden muss evtl. auch bei der Körperpflege geholfen werden.</p>
-                        </div>
+
+                        {/* Details button */}
+                        <button
+                          onClick={() => setDetailsOpen(detailsOpen === a.id ? null : a.id)}
+                          className="text-xs font-medium text-[#04436F] hover:underline"
+                        >
+                          {detailsOpen === a.id ? "Details ausblenden" : "Details anzeigen"}
+                        </button>
+
+                        {/* Details panel (limited info - no client name/contact before accepting) */}
+                        {detailsOpen === a.id && (
+                          <div className="bg-gray-50 border border-gray-100 rounded-lg p-4 space-y-2 text-sm">
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <p className="text-xs text-gray-400 font-medium">Service</p>
+                                <p className="text-gray-800">{a.user?.services?.map(s => s.name).join(", ") || "—"}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-400 font-medium">Subservice</p>
+                                <p className="text-gray-800">{a.user?.subServices?.map(s => s.name).join(", ") || "—"}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-400 font-medium">PLZ</p>
+                                <p className="text-gray-800">{a.user?.carePostalCode || a.user?.postalCode || "—"}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-400 font-medium">Ort</p>
+                                <p className="text-gray-800">{a.user?.careCity || "—"}</p>
+                              </div>
+                              {a.Schedule && (
+                                <>
+                                  <div>
+                                    <p className="text-xs text-gray-400 font-medium">Datum</p>
+                                    <p className="text-gray-800">{a.Schedule.date ? new Date(a.Schedule.date).toLocaleDateString("de-DE") : a.Schedule.day || "—"}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-xs text-gray-400 font-medium">Uhrzeit</p>
+                                    <p className="text-gray-800">{a.Schedule.startTime || "—"} Uhr</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-xs text-gray-400 font-medium">Dauer</p>
+                                    <p className="text-gray-800">{a.Schedule.hours || "—"} Std</p>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                            {(a.user?.specialRequests || a.user?.mobility || a.user?.mobilityAids || a.user?.physicalState || a.user?.allergies || a.user?.allergyDetails || a.user?.mentalConditions || a.user?.mentalDiagnoses || a.user?.incontinence || a.user?.medicalFindings) && (
+                              <div className="pt-2 border-t border-gray-200">
+                                <p className="text-xs text-gray-400 font-medium mb-1">Fragebogen</p>
+                                {a.user?.physicalState && <p className="text-xs text-gray-600">Zustand: {a.user.physicalState}</p>}
+                                {a.user?.mobility && <p className="text-xs text-gray-600">Mobilität: {a.user.mobility}</p>}
+                                {a.user?.mobilityAids && <p className="text-xs text-gray-600">Hilfsmittel: {a.user.mobilityAids}</p>}
+                                {a.user?.allergies && <p className="text-xs text-gray-600">Allergien: {a.user.allergies}{a.user?.allergyDetails ? ` (${a.user.allergyDetails})` : ""}</p>}
+                                {a.user?.incontinence && <p className="text-xs text-gray-600">Inkontinenz: {a.user.incontinence}</p>}
+                                {a.user?.mentalConditions && <p className="text-xs text-gray-600">Psychisch: {a.user.mentalConditions}{a.user?.mentalDiagnoses ? ` (${a.user.mentalDiagnoses})` : ""}</p>}
+                                {a.user?.medicalFindings && <p className="text-xs text-gray-600">Befunde: {a.user.medicalFindings}</p>}
+                                {a.user?.specialRequests && <p className="text-xs text-gray-600">Hinweise: {a.user.specialRequests}</p>}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
                         <div className="flex gap-2">
                           <button
                             onClick={() => handleAssignmentAction(a.id, "confirmed")}
@@ -514,7 +580,12 @@ export default function EmployeeDashboard() {
                           method: "POST", headers: { "Content-Type": "application/json" },
                           body: JSON.stringify({ employeeId: employeeData.id, text: `[${nachrichtType}] ${nachrichtText}`, author: `${employeeData.firstName} ${employeeData.lastName}` }),
                         });
-                        if (res.ok) { setNachrichtFeedback({ type: "success", text: "Nachricht gesendet." }); setNachrichtText(""); }
+                        if (res.ok) {
+                          const note = await res.json();
+                          setNachrichtFeedback({ type: "success", text: "Nachricht gesendet." });
+                          setNachrichtText("");
+                          setSentMessages(prev => [note, ...prev]);
+                        }
                         else setNachrichtFeedback({ type: "error", text: "Fehler beim Senden." });
                       } catch { setNachrichtFeedback({ type: "error", text: "Netzwerkfehler." }); }
                       finally { setNachrichtSending(false); }
@@ -525,6 +596,27 @@ export default function EmployeeDashboard() {
                   {nachrichtFeedback && (
                     <div className={`p-3 rounded-xl text-sm ${nachrichtFeedback.type === "success" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
                       {nachrichtFeedback.text}
+                    </div>
+                  )}
+
+                  {/* Conversation: own messages + admin replies */}
+                  {sentMessages.length > 0 && (
+                    <div className="mt-4 border-t border-gray-100 pt-4">
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Nachrichten</p>
+                      <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                        {sentMessages.map(m => {
+                          const isAdmin = m.author === "Admin";
+                          return (
+                            <div key={m.id} className={`border rounded-lg p-3 ${isAdmin ? "bg-blue-50 border-blue-100" : "bg-gray-50 border-gray-100"}`}>
+                              <div className="flex items-center justify-between mb-1">
+                                <span className={`text-xs font-medium ${isAdmin ? "text-blue-700" : "text-gray-500"}`}>{isAdmin ? "PHC Team" : m.author}</span>
+                                <span className="text-xs text-gray-400">{new Date(m.createdAt).toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+                              </div>
+                              <p className="text-sm text-gray-800">{m.text}</p>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
                 </div>

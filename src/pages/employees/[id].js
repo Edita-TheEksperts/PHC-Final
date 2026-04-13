@@ -28,9 +28,9 @@ export default function EmployeeDetails() {
     }
   }, [id]);
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) return <div>Wird geladen...</div>;
   if (error) return <div>{error}</div>;
-  if (!employee) return <div>Employee not found</div>;
+  if (!employee) return <div>Mitarbeiter nicht gefunden</div>;
 
   // helpers to ensure values are safe to render
   const safeText = (val, fallback = "N/A") =>

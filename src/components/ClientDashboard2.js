@@ -10,22 +10,13 @@ export default function ClientDashboard2({ userId }) {
 
   const [downloading, setDownloading] = useState(null);
 
-  async function downloadInvoice(month) {
+  // Opens the Stripe hosted invoice in a new tab (the API 302-redirects).
+  function downloadInvoice(month) {
     setDownloading(month);
     try {
-      const res = await fetch(`/api/client/invoice-pdf?userId=${userId}&month=${month}`);
-      if (!res.ok) throw new Error();
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `Rechnung-${month}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      alert("Fehler beim Erstellen der Rechnung.");
+      window.open(`/api/client/invoice-pdf?userId=${userId}&month=${month}`, "_blank", "noopener");
     } finally {
-      setDownloading(null);
+      setTimeout(() => setDownloading(null), 500);
     }
   }
 
@@ -93,9 +84,10 @@ export default function ClientDashboard2({ userId }) {
                   onClick={() => downloadInvoice(p.month)}
                   disabled={downloading === p.month}
                   className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-gray-100 text-gray-600 hover:bg-[#B99B5F]/10 hover:text-[#B99B5F] transition disabled:opacity-50"
+                  title="Zahlungsbestätigung öffnen"
                 >
                   <FileText className="w-3.5 h-3.5" />
-                  {downloading === p.month ? "…" : "PDF"}
+                  {downloading === p.month ? "…" : "Zahlungsbestätigung"}
                 </button>
               </div>
             </div>

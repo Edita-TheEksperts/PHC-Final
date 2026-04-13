@@ -46,6 +46,7 @@ export default async function handler(req, res) {
 
       // Contact / Languages
       languages,
+      otherLanguage,
       emergencyContactName,
       emergencyContactPhone,
 
@@ -199,6 +200,7 @@ const toStrAllowEmpty = (v) => {
     const questionnaireData = removeNulls({
       // Kontakt
       languages: toStr(languages),
+      otherLanguage: toStr(otherLanguage),
       emergencyContactName: toStr(emergencyContactName),
       emergencyContactPhone: toStr(emergencyContactPhone),
 

@@ -101,7 +101,7 @@ export default function EmployeesPage() {
       setEmployees((prev) => [...prev, data.employee]); // add to list
       setNewEmployee({ firstName: "", lastName: "", email: "" }); // reset
     } else {
-      alert("Error adding employee");
+      alert("Fehler beim Hinzufügen des Mitarbeiters");
     }
   }
 

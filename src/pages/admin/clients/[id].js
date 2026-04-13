@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState, memo, useCallback } from "react";
 
 import { useRouter } from "next/router";
+import { SELECT_FIELDS, JA_NEIN_FIELDS } from "../../../lib/formOptions";
 
 const CLIENT_STATUSES = ["open", "aktiv", "inaktiv", "storniert", "gekuendigt"];
 
@@ -91,12 +92,27 @@ export default function ClientDetails() {
   // Internal Notes
   const [clientNotes, setClientNotes] = useState([]);
   const [clientNoteText, setClientNoteText] = useState("");
+  const [clientNoteType, setClientNoteType] = useState("note");
+  const [clientNoteDueDate, setClientNoteDueDate] = useState("");
 
   useEffect(() => {
     if (!id) return;
     fetch(`/api/admin/notes?userId=${id}`)
       .then(r => r.json())
-      .then(d => setClientNotes(d.notes || []))
+      .then(d => {
+        const notes = d.notes || [];
+        setClientNotes(notes);
+        // Auto-mark unread client messages as read by admin
+        notes
+          .filter(n => n.author !== "Admin" && n.readByAdmin === false)
+          .forEach(n => {
+            fetch("/api/admin/notes", {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ id: n.id, readByAdmin: true }),
+            }).catch(() => {});
+          });
+      })
       .catch(() => {});
   }, [id]);
 
@@ -223,10 +239,8 @@ const ALLOWED_FIELDS = useMemo(
     "requestPhone",
 
     // =====================
-    // Care / Address
+    // Adresse
     // =====================
-    "careFirstName",
-    "careLastName",
     "carePhone",
     "careStreet",
     "carePostalCode",
@@ -342,8 +356,8 @@ const ALLOWED_FIELDS = useMemo(
     anrede: "Anrede",
     firstname: "Vorname",
     lastname: "Nachname",
-firstName: "Vorname (zu betreuende Person)",
-lastName: "Nachname (zu betreuende Person)",
+firstName: "Vorname",
+lastName: "Nachname",
 
 
     // Anfragende Person
@@ -497,19 +511,9 @@ lastName: "Nachname (zu betreuende Person)",
     );
   }
 
-  // Fields that should be Ja/Nein dropdowns (matching registration form)
-  const JA_NEIN_FIELDS = new Set([
-    "careHasParking", "hasAllergies", "hasTech", "mentalSupportNeeded",
-    "shoppingWithClient", "reading", "cardGames", "companionship",
-    "companionshipSupport", "allergyCheck", "jointCooking",
-  ]);
-
-  // Fields that should be dropdowns with specific options
-  const SELECT_OPTIONS = {
-    physicalState: ["Vollständig mobil", "Teilweise mobil", "Stark eingeschränkt", "Bettlägerig"],
-    cooking: ["Ja, alleine", "Ja, mit Hilfe", "Nein"],
-    transportOption: ["Eigenes Auto", "ÖV", "Begleitung nötig", "Nicht mobil"],
-  };
+  // Picklists and Ja/Nein fields live in src/lib/formOptions.js so admin/client/employee
+  // edit views share the same field types as the registration funnel.
+  const SELECT_OPTIONS = SELECT_FIELDS;
 
   function inferFieldType(key, value) {
     if (typeof value === "boolean") return "boolean";
@@ -729,9 +733,9 @@ const QUESTIONNAIRE_SECTIONS = useMemo(
       title: "Persönliche Angaben (Zusammenfassung)",
       fields: [
         // Zu betreuende Person / Einsatzort
-        { key: "firstName", label: "Vorname (zu betreuende Person)" },
-        { key: "lastName", label: "Nachname (zu betreuende Person)" },
-        { key: "carePhone", label: "Telefonnummer (zu betreuende Person)" },
+        { key: "firstName", label: "Vorname" },
+        { key: "lastName", label: "Nachname" },
+        { key: "carePhone", label: "Telefon" },
 
         // Kontakt
         { key: "phone", label: "Telefonnummer" },
@@ -1135,8 +1139,9 @@ const QUESTIONNAIRE_SECTIONS = useMemo(
                 <p className="text-gray-500 text-xs">{client.requestEmail || ""}</p>
               </div>
               <div>
-                <p className="text-xs font-bold text-gray-500 uppercase mb-1">Betreuende Person</p>
-                <p className="font-medium">{client.careFirstName || "—"} {client.careLastName || ""}</p>
+                <p className="text-xs font-bold text-gray-500 uppercase mb-1">Adresse</p>
+                <p className="font-medium">{client.careStreet || "—"}</p>
+                <p className="text-gray-500">{client.carePostalCode || ""} {client.careCity || ""}</p>
                 <p className="text-gray-500">{client.carePhone || "—"}</p>
               </div>
             </div>
@@ -1166,6 +1171,32 @@ const QUESTIONNAIRE_SECTIONS = useMemo(
             )}
           </div>
 
+          {/* Einsätze mit Kilometern */}
+          {client?.schedules?.length > 0 && (
+            <div className="bg-gray-50 p-6 rounded-xl border">
+              <h3 className="text-lg font-semibold text-gray-700 mb-4">Einsätze</h3>
+              <ul className="space-y-2">
+                {client.schedules.map((s) => (
+                  <li key={s.id} className="p-3 bg-white border rounded text-sm flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-800 truncate">
+                        {s.date ? new Date(s.date).toLocaleDateString("de-CH") : s.day || "—"} · {s.startTime || "—"}
+                      </p>
+                      <p className="text-xs text-gray-500 truncate">
+                        {s.serviceName || "—"}{s.subServiceName ? ` / ${s.subServiceName}` : ""}
+                        {s.employee ? ` · ${s.employee.firstName} ${s.employee.lastName}` : ""}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs flex-shrink-0">
+                      <span className="px-2 py-0.5 bg-blue-50 border border-blue-100 text-blue-700 rounded">{s.hours || 0} Std</span>
+                      <span className="px-2 py-0.5 bg-purple-50 border border-purple-100 text-purple-700 rounded">{s.kilometers || 0} km</span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {/* Schedules placeholder */}
           {showSchedules && (
             <div className="bg-gray-50 p-6 rounded-xl border">
@@ -1189,14 +1220,47 @@ const QUESTIONNAIRE_SECTIONS = useMemo(
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 px-6 lg:px-8">
         {/* Interne Notizen */}
         <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3">Interne Notizen</h3>
+          <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3">Interne Notizen (Admin-only)</h3>
           <p className="text-xs text-gray-400 mb-3">Nicht sichtbar für Kunde</p>
+
+          {/* Note type selector */}
+          <div className="flex gap-2 mb-3">
+            <button
+              type="button"
+              onClick={() => setClientNoteType("note")}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${clientNoteType === "note" ? "bg-[#04436F] text-white border-[#04436F]" : "bg-white text-gray-600 border-gray-200"}`}
+            >
+              Nur Notiz
+            </button>
+            <button
+              type="button"
+              onClick={() => setClientNoteType("task")}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${clientNoteType === "task" ? "bg-[#04436F] text-white border-[#04436F]" : "bg-white text-gray-600 border-gray-200"}`}
+            >
+              Aufgabe
+            </button>
+          </div>
+
           <textarea
             value={clientNoteText}
             onChange={(e) => setClientNoteText(e.target.value)}
             placeholder="Notiz hinzufügen..."
             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm min-h-[60px] focus:outline-none focus:ring-2 focus:ring-[#04436F]/20 mb-2"
           />
+
+          {/* Due date (only for tasks) */}
+          {clientNoteType === "task" && (
+            <div className="mb-2">
+              <label className="block text-xs font-medium text-gray-500 mb-1">Zu erledigen bis:</label>
+              <input
+                type="date"
+                value={clientNoteDueDate}
+                onChange={(e) => setClientNoteDueDate(e.target.value)}
+                className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#04436F]/20 w-full"
+              />
+            </div>
+          )}
+
           <button
             onClick={async () => {
               if (!clientNoteText.trim()) return;
@@ -1204,12 +1268,20 @@ const QUESTIONNAIRE_SECTIONS = useMemo(
                 const res = await fetch("/api/admin/notes", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ text: clientNoteText, userId: client.id, author: "Admin" }),
+                  body: JSON.stringify({
+                    text: clientNoteText,
+                    userId: client.id,
+                    author: "Admin",
+                    noteType: clientNoteType,
+                    ...(clientNoteType === "task" && clientNoteDueDate ? { dueDate: clientNoteDueDate } : {}),
+                  }),
                 });
                 if (res.ok) {
                   const note = await res.json();
                   setClientNotes(prev => [note, ...prev]);
                   setClientNoteText("");
+                  setClientNoteDueDate("");
+                  setClientNoteType("note");
                 }
               } catch {}
             }}
@@ -1218,14 +1290,47 @@ const QUESTIONNAIRE_SECTIONS = useMemo(
             Notiz speichern
           </button>
           {clientNotes.length > 0 && (
-            <div className="mt-3 space-y-2 max-h-[200px] overflow-y-auto">
+            <div className="mt-3 space-y-2 max-h-[300px] overflow-y-auto">
               {clientNotes.map(n => (
-                <div key={n.id} className="bg-gray-50 border border-gray-100 rounded-lg p-3">
+                <div key={n.id} className={`border rounded-lg p-3 ${n.noteType === "task" && !n.completed ? "bg-amber-50 border-amber-200" : "bg-gray-50 border-gray-100"}`}>
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-medium text-gray-500">{n.author}</span>
-                    <span className="text-xs text-gray-400">{new Date(n.createdAt).toLocaleDateString("de-CH")}</span>
+                    <div className="flex items-center gap-2">
+                      {n.noteType === "task" && (
+                        <button
+                          onClick={async () => {
+                            try {
+                              const res = await fetch("/api/admin/notes", {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ id: n.id, completed: !n.completed }),
+                              });
+                              if (res.ok) {
+                                setClientNotes(prev => prev.map(note => note.id === n.id ? { ...note, completed: !n.completed } : note));
+                              }
+                            } catch {}
+                          }}
+                          className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${n.completed ? "bg-emerald-500 border-emerald-500" : "border-gray-300"}`}
+                        >
+                          {n.completed && <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                        </button>
+                      )}
+                      <span className="text-xs font-medium text-gray-500">{n.author}</span>
+                      {n.noteType === "task" && (
+                        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${n.completed ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                          {n.completed ? "Erledigt" : "Aufgabe"}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {n.dueDate && (
+                        <span className={`text-[10px] font-medium ${new Date(n.dueDate) < new Date() && !n.completed ? "text-red-600" : "text-gray-400"}`}>
+                          Fällig: {new Date(n.dueDate).toLocaleDateString("de-CH")}
+                        </span>
+                      )}
+                      <span className="text-xs text-gray-400">{new Date(n.createdAt).toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+                    </div>
                   </div>
-                  <p className="text-sm text-gray-800">{n.text}</p>
+                  <p className={`text-sm ${n.completed ? "text-gray-400 line-through" : "text-gray-800"}`}>{n.text}</p>
                 </div>
               ))}
             </div>

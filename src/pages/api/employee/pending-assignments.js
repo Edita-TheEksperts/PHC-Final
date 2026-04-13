@@ -16,8 +16,33 @@ export default async function handler(req, res) {
         confirmationStatus: "pending",
         status: "active",
       },
-      include: {
-        user: true, // get client info
+      select: {
+        id: true,
+        confirmationStatus: true,
+        status: true,
+        Schedule: true,
+        user: {
+          select: {
+            // Location (city/PLZ only — no street, no name, no contact)
+            postalCode: true,
+            carePostalCode: true,
+            careCity: true,
+            // Services
+            services: { select: { id: true, name: true } },
+            subServices: { select: { id: true, name: true } },
+            // Questionnaire / Step 4
+            physicalState: true,
+            mobility: true,
+            mobilityAids: true,
+            specialRequests: true,
+            allergies: true,
+            allergyDetails: true,
+            mentalConditions: true,
+            mentalDiagnoses: true,
+            incontinence: true,
+            medicalFindings: true,
+          },
+        },
       },
     });
 

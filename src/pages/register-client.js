@@ -66,6 +66,11 @@ const [discountType, setDiscountType] = useState(null);
   }, []);
 
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [showLoginForm, setShowLoginForm] = useState(false);
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginError, setLoginError] = useState("");
+  const [loginLoading, setLoginLoading] = useState(false);
 const [loadingStep4, setLoadingStep4] = useState(false);
 
   const today = new Date();
@@ -522,6 +527,7 @@ const requiresAllergyInfo = Array.isArray(form.subServices)
 
     // ── Communication ──
     languages: form.languages || "",
+    otherLanguage: form.languageOther || "",
     communicationVision: form.vision || "",
     communicationHearing: form.hearing || "",
     communicationSpeech: form.speaking || "",
@@ -1425,7 +1431,7 @@ const timeOptions = Array.from({ length: 48 }, (_, i) => {
 
       <div className="relative" style={{ width: "120px" }}>
         <div className="time-picker-display" onClick={() => setOpen(!open)}>
-          {value || "Select time"}
+          {value || "Uhrzeit wählen"}
         </div>
         {open && (
           <div className="time-grid-dropdown">
@@ -2312,11 +2318,82 @@ onChange={(date) => {
         Bereits registriert?{" "}
         <span
           className="text-[#B99B5F] font-semibold cursor-pointer underline"
-          onClick={() => router.push("/login")}
+          onClick={() => setShowLoginForm(!showLoginForm)}
         >
           Hier einloggen
         </span>
       </p>
+      {showLoginForm && (
+        <div className="mt-4 p-4 border border-[#B99B5F]/30 rounded-xl bg-[#B99B5F]/5 space-y-3">
+          <p className="text-sm font-medium text-gray-700">Melden Sie sich an, um Ihre Daten automatisch einzufügen:</p>
+          <input
+            type="email"
+            placeholder="E-Mail"
+            value={loginEmail}
+            onChange={e => setLoginEmail(e.target.value)}
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B99B5F]/20"
+          />
+          <input
+            type="password"
+            placeholder="Passwort"
+            value={loginPassword}
+            onChange={e => setLoginPassword(e.target.value)}
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B99B5F]/20"
+          />
+          {loginError && <p className="text-red-600 text-xs">{loginError}</p>}
+          <button
+            type="button"
+            disabled={loginLoading}
+            onClick={async () => {
+              setLoginError("");
+              setLoginLoading(true);
+              try {
+                const res = await fetch("/api/login", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ email: loginEmail, password: loginPassword }),
+                });
+                const data = await res.json();
+                if (!res.ok || !data.token) {
+                  setLoginError(data.message || "Anmeldung fehlgeschlagen.");
+                  setLoginLoading(false);
+                  return;
+                }
+                // Fetch user profile data
+                const userRes = await fetch("/api/user/getUserData", {
+                  headers: { Authorization: `Bearer ${data.token}` },
+                });
+                if (userRes.ok) {
+                  const user = await userRes.json();
+                  setForm(prev => ({
+                    ...prev,
+                    anrede: user.anrede || prev.anrede,
+                    firstName: user.firstName || prev.firstName,
+                    lastName: user.lastName || prev.lastName,
+                    email: user.email || prev.email,
+                    phone: user.phone || prev.phone,
+                    street: user.careStreet || user.address || prev.street,
+                    postalCode: user.carePostalCode || user.postalCode || prev.postalCode,
+                    city: user.careCity || prev.city,
+                    kanton: user.kanton || prev.kanton,
+                  }));
+                  setShowLoginForm(false);
+                  setLoginError("");
+                } else {
+                  setLoginError("Profildaten konnten nicht geladen werden.");
+                }
+              } catch {
+                setLoginError("Netzwerkfehler.");
+              } finally {
+                setLoginLoading(false);
+              }
+            }}
+            className="w-full py-2.5 bg-[#B99B5F] text-white rounded-lg text-sm font-medium hover:bg-[#a88a54] transition disabled:opacity-50"
+          >
+            {loginLoading ? "Wird geladen..." : "Einloggen & Daten übernehmen"}
+          </button>
+        </div>
+      )}
     </div>
 
     <div className="space-y-6 mt-6">

@@ -1421,7 +1421,8 @@ await fetchAppointments(userId);
                             <p className="text-sm font-medium text-gray-800">
                               {new Date(item.date).toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" })}
                               {item.startTime && ` · ${item.startTime}`}
-                              {item.hours && ` · ${item.hours} Std`}
+                              {item.hours ? ` · ${item.hours} Std` : ""}
+                              {` · ${item.kilometers || 0} km`}
                             </p>
                           )}
                         </div>
@@ -1553,11 +1554,21 @@ await fetchAppointments(userId);
                         <p className="text-sm font-bold text-gray-900">{userData.frequency || "–"}</p>
                       </div>
                       <div className="bg-gray-50 rounded-xl p-4">
-                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Laufzeit</p>
-                        <p className="text-sm font-bold text-gray-900">{userData.duration ? `${userData.duration} Monate` : "–"}</p>
+                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Einsatz Dauer</p>
+                        <p className="text-sm font-bold text-gray-900">{userData.duration ? `${userData.duration} Stunden` : "–"}</p>
+                      </div>
+                      <div className="bg-gray-50 rounded-xl p-4">
+                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Status</p>
+                        <p className="text-sm font-bold text-gray-900">
+                          {clientDetails?.assignments?.some(a => a.status === "active" && a.employee) ? (
+                            <span className="text-emerald-600">Zugewiesen</span>
+                          ) : (
+                            <span className="text-amber-600">Offen</span>
+                          )}
+                        </p>
                       </div>
                       <div className="col-span-2 bg-[#B99B5F]/5 rounded-xl p-4 border border-[#B99B5F]/10">
-                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Pflegeadresse</p>
+                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Adresse</p>
                         <p className="text-sm font-bold text-gray-900">
                           {[userData.careStreet, userData.carePostalCode, userData.careCity].filter(Boolean).join(", ") || "–"}
                         </p>

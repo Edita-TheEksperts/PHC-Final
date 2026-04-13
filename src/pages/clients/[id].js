@@ -30,7 +30,7 @@ export default function ClientDetails() {
   }, [id]);
 
   if (loading) {
-    return <p>Loading...</p>; // Show loading state while fetching
+    return <p>Wird geladen...</p>;
   }
 
   if (!client) {

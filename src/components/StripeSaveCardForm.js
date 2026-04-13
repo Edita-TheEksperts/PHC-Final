@@ -28,7 +28,7 @@ export default function SaveCardForm({ userId, customerId, form }) {
     });
 
     if (result.error) {
-      alert("Card could not be saved. " + result.error.message);
+      alert("Karte konnte nicht gespeichert werden. " + result.error.message);
     } else {
       const paymentMethodId = result.setupIntent.payment_method;
 
@@ -38,7 +38,7 @@ export default function SaveCardForm({ userId, customerId, form }) {
         body: JSON.stringify({ userId, paymentMethodId }),
       });
 
-      alert("✅ Card saved for future use.");
+      alert("Karte wurde für zukünftige Zahlungen gespeichert.");
     }
 
     setLoading(false);
@@ -48,7 +48,7 @@ export default function SaveCardForm({ userId, customerId, form }) {
     <div>
       <CardElement />
       <button onClick={handleSaveCard} disabled={!stripe || loading}>
-        {loading ? "Saving..." : "Save Card"}
+        {loading ? "Wird gespeichert..." : "Karte speichern"}
       </button>
     </div>
   );

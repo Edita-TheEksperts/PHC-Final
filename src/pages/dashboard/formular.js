@@ -219,11 +219,10 @@ export default function FormularPage() {
                   ]
                 },
                 {
-                  title: "Pflegeadresse", icon: "M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z",
+                  title: "Adresse", icon: "M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z",
                   fields: [
-                    ["Betreuende Person Vorname", form.careFirstName], ["Betreuende Person Nachname", form.careLastName],
-                    ["Pflege Straße", form.careStreet], ["Pflege PLZ", form.carePostalCode], ["Pflege Stadt", form.careCity],
-                    ["Pflege Telefon", form.carePhone], ["Parkplatz", form.careHasParking], ["Eingang", form.careEntrance],
+                    ["Strasse", form.careStreet], ["PLZ", form.carePostalCode], ["Stadt", form.careCity],
+                    ["Telefon", form.carePhone], ["Parkplatz", form.careHasParking], ["Eingang", form.careEntrance],
                     ["Eingang Details", form.careEntranceDetails], ["Briefkasten Schlüsselort", form.mailboxKeyLocation],
                     ["Briefkasten Details", form.mailboxDetails],
                   ]
@@ -312,12 +311,10 @@ export default function FormularPage() {
                 <Input label="Telefon" name="phone" value={form.phone} onChange={handleChange} />
                 <Input label="Sprachen" name="languages" value={form.languages} onChange={handleChange} />
                 <Input label="Andere Sprache" name="otherLanguage" value={form.otherLanguage} onChange={handleChange} />
-                <Input label="Betreuende Person Vorname" name="careFirstName" value={form.careFirstName} onChange={handleChange} />
-                <Input label="Betreuende Person Nachname" name="careLastName" value={form.careLastName} onChange={handleChange} />
-                <Input label="Pflege Straße" name="careStreet" value={form.careStreet} onChange={handleChange} />
-                <Input label="Pflege PLZ" name="carePostalCode" value={form.carePostalCode} onChange={handleChange} />
-                <Input label="Pflege Stadt" name="careCity" value={form.careCity} onChange={handleChange} />
-                <Input label="Pflege Telefon" name="carePhone" value={form.carePhone} onChange={handleChange} />
+                <Input label="Strasse" name="careStreet" value={form.careStreet} onChange={handleChange} />
+                <Input label="PLZ" name="carePostalCode" value={form.carePostalCode} onChange={handleChange} />
+                <Input label="Stadt" name="careCity" value={form.careCity} onChange={handleChange} />
+                <Input label="Telefon" name="carePhone" value={form.carePhone} onChange={handleChange} />
                 <Input label="Parkplatz vorhanden?" name="careHasParking" value={form.careHasParking} onChange={handleChange} yesNo={true} />
                 <Input label="Eingang" name="careEntrance" value={form.careEntrance} onChange={handleChange} />
                 <Input label="Eingang Details" name="careEntranceDetails" value={form.careEntranceDetails} onChange={handleChange} />

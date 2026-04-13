@@ -11,6 +11,7 @@ const STATUS_CONFIG = {
 export default function AssignmentsList({ confirmedAssignments = [], onUpdate }) {
   const today = new Date();
   const [updates, setUpdates] = useState({});
+  const [detailsOpen, setDetailsOpen] = useState(null);
 
   const handleCancel = async (s) => {
     if (!window.confirm("Sind Sie sicher, dass Sie diesen Einsatz stornieren möchten?")) return;
@@ -71,6 +72,11 @@ export default function AssignmentsList({ confirmedAssignments = [], onUpdate })
         assignmentId: assignment.id,
         scheduleId: null,
         clientName: `${client.firstName} ${client.lastName}`,
+        clientPhone: client.phone,
+        clientEmail: client.email,
+        clientStreet: client.careStreet,
+        clientPLZ: client.carePostalCode || client.postalCode,
+        clientCity: client.careCity,
         service: client.services?.map(s => s.name).join(", ") || "—",
         date: null,
         startTime: null,
@@ -93,6 +99,11 @@ export default function AssignmentsList({ confirmedAssignments = [], onUpdate })
         scheduleId: schedule.id,
         employeeId: assignment.employeeId,
         clientName: `${client.firstName} ${client.lastName}`,
+        clientPhone: client.phone,
+        clientEmail: client.email,
+        clientStreet: client.careStreet,
+        clientPLZ: client.carePostalCode || client.postalCode,
+        clientCity: client.careCity,
         service: client.services?.map(s => s.name).join(", ") || "—",
         date,
         startTime: schedule.startTime,
@@ -130,13 +141,35 @@ export default function AssignmentsList({ confirmedAssignments = [], onUpdate })
           )}
         </div>
 
-        <div className="flex gap-4 text-xs text-gray-500 pb-1">
-          <span>{s.baseHours} Std</span>
-          <span>·</span>
-          <span>{s.baseKm} km</span>
+        <div className="flex items-center justify-between pb-1">
+          <div className="flex gap-4 text-xs text-gray-500">
+            <span>{s.baseHours} Std</span>
+            <span>·</span>
+            <span>{s.baseKm} km</span>
+          </div>
+          <button
+            onClick={() => setDetailsOpen(detailsOpen === s.id ? null : s.id)}
+            className="text-xs font-medium text-[#04436F] hover:underline"
+          >
+            {detailsOpen === s.id ? "Ausblenden" : "Details"}
+          </button>
         </div>
 
-        {s.status === "done" && (
+        {/* Client details (only visible after accepting) */}
+        {detailsOpen === s.id && (
+          <div className="bg-gray-50 border border-gray-100 rounded-lg p-3 space-y-1.5 text-xs">
+            <p className="font-semibold text-gray-700 text-sm">{s.clientName}</p>
+            {s.clientPhone && <p className="text-gray-600">Tel: {s.clientPhone}</p>}
+            {s.clientEmail && <p className="text-gray-600">E-Mail: {s.clientEmail}</p>}
+            {(s.clientStreet || s.clientCity) && (
+              <p className="text-gray-600">
+                {s.clientStreet && `${s.clientStreet}, `}{s.clientPLZ && `${s.clientPLZ} `}{s.clientCity || ""}
+              </p>
+            )}
+          </div>
+        )}
+
+        {(s.status === "done" || s.status === "inProgress") && (
           <div className="space-y-2 pt-2 border-t border-gray-100">
             <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Zusätzliche Einträge</p>
             <div className="grid grid-cols-2 gap-2">
@@ -147,7 +180,7 @@ export default function AssignmentsList({ confirmedAssignments = [], onUpdate })
                 onChange={e => setUpdates(prev => ({ ...prev, [s.id]: { ...prev[s.id], extraHours: e.target.value } }))}
               />
               <input
-                type="number" min="0" placeholder="+ km"
+                type="number" min="0" placeholder="+ Kilometer"
                 className={inputCls}
                 value={updates[s.id]?.extraKm || ""}
                 onChange={e => setUpdates(prev => ({ ...prev, [s.id]: { ...prev[s.id], extraKm: e.target.value } }))}

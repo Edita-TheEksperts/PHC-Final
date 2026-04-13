@@ -61,6 +61,8 @@ export default function DashboardPage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState({ buchungenSort: "newest", bewerbungenDays: "" });
+  const [dueTasks, setDueTasks] = useState([]);
+  const [unreadMessages, setUnreadMessages] = useState([]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -71,7 +73,40 @@ export default function DashboardPage() {
       return;
     }
     fetchDashboard();
+    fetchDueTasks();
+    fetchUnreadMessages();
   }, []);
+
+  async function fetchDueTasks() {
+    try {
+      const res = await fetch("/api/admin/due-tasks");
+      const json = await res.json();
+      setDueTasks(json.tasks || []);
+    } catch {
+      setDueTasks([]);
+    }
+  }
+
+  async function fetchUnreadMessages() {
+    try {
+      const res = await fetch("/api/admin/unread-messages");
+      const json = await res.json();
+      setUnreadMessages(json.messages || []);
+    } catch {
+      setUnreadMessages([]);
+    }
+  }
+
+  async function markMessageRead(id) {
+    try {
+      await fetch("/api/admin/notes", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, readByAdmin: true }),
+      });
+      setUnreadMessages(prev => prev.filter(m => m.id !== id));
+    } catch {}
+  }
 
   async function fetchDashboard() {
     try {
@@ -187,6 +222,69 @@ export default function DashboardPage() {
             <p className="text-2xl font-bold text-blue-600 mt-1">{einsaetzeHeute.length}</p>
           </div>
         </div>
+
+        {/* Neue Nachrichten (unread from clients/employees) */}
+        {unreadMessages.length > 0 && (
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <h3 className="text-sm font-semibold text-blue-800 mb-2 flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+              Neue Nachrichten ({unreadMessages.length})
+            </h3>
+            <div className="space-y-2">
+              {unreadMessages.map(m => (
+                <div key={m.id} className="flex items-center justify-between bg-white border border-blue-100 rounded-lg px-3 py-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-gray-800 truncate">{m.text}</p>
+                    <p className="text-xs text-gray-400">
+                      {m.userName || m.employeeName || m.author || "—"} · {new Date(m.createdAt).toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      markMessageRead(m.id);
+                      if (m.userId) router.push(`/admin/clients/${m.userId}#notes`);
+                      else if (m.employeeId) router.push(`/admin/employees/${m.employeeId}#notes`);
+                    }}
+                    className="ml-3 text-xs font-medium text-[#04436F] hover:underline flex-shrink-0"
+                  >
+                    Anzeigen →
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Offene Aufgaben (due tasks from notes) */}
+        {dueTasks.length > 0 && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+            <h3 className="text-sm font-semibold text-amber-800 mb-2 flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              Fällige Aufgaben ({dueTasks.length})
+            </h3>
+            <div className="space-y-2">
+              {dueTasks.map(t => (
+                <div key={t.id} className="flex items-center justify-between bg-white border border-amber-100 rounded-lg px-3 py-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-gray-800 truncate">{t.text}</p>
+                    <p className="text-xs text-gray-400">
+                      {t.userName || t.employeeName || "—"} · Fällig: {new Date(t.dueDate).toLocaleDateString("de-CH")}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (t.userId) router.push(`/admin/clients/${t.userId}`);
+                      else if (t.employeeId) router.push(`/admin/employees/${t.employeeId}`);
+                    }}
+                    className="ml-3 text-xs font-medium text-[#04436F] hover:underline flex-shrink-0"
+                  >
+                    Anzeigen →
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* 1. Neue Buchungen */}
         <DashboardSection title="Neue Buchungen" count={sortedBuchungen.length}>

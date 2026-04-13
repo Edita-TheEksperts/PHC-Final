@@ -57,7 +57,7 @@ export default async function handler(req, res) {
     if (employee && employee.password) {
       if (employee.status !== "approved") {
         return res.status(403).json({
-          message: "Your employee account is not approved.",
+          message: "Ihr Mitarbeiterkonto wurde noch nicht freigegeben.",
         })
       }
 

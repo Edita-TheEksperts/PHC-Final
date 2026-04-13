@@ -333,6 +333,11 @@ model Employee {
   bankName             String?
   bic                  String?
   iban                 String?
+  bankUpdatedAt        DateTime?
+  birthDate            DateTime?
+  maritalStatus        String?
+  ahvNumber            String?
+  hasChildren          Boolean?
   invited              Boolean            @default(false)
   inviteSentAt         DateTime?
   salesforceId         String?
@@ -346,14 +351,18 @@ model Employee {
 }
 
 model InternalNote {
-  id          String    @id @default(uuid())
-  text        String
-  author      String    @default("Admin")
-  userId      String?
-  employeeId  String?
-  createdAt   DateTime  @default(now())
-  user        User?     @relation("UserNotes", fields: [userId], references: [id])
-  employee    Employee? @relation("EmployeeNotes", fields: [employeeId], references: [id])
+  id           String    @id @default(uuid())
+  text         String
+  author       String    @default("Admin")
+  userId       String?
+  employeeId   String?
+  noteType     String    @default("note")
+  dueDate      DateTime?
+  completed    Boolean   @default(false)
+  readByAdmin  Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  user         User?     @relation("UserNotes", fields: [userId], references: [id])
+  employee     Employee? @relation("EmployeeNotes", fields: [employeeId], references: [id])
 }
 
 model Transaction {

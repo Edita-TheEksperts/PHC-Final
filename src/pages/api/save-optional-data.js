@@ -51,7 +51,7 @@ const allowedUserFields = new Set([
   "communicationVision", "communicationHearing", "communicationSpeech", "foodSupportTypes",
   "basicCareNeeds", "basicCareOtherField", "healthPromotions", "healthPromotionOther",
   "mentalSupportNeeded", "mentalDiagnoses", "behaviorTraits", "healthFindings",
-  "languages", "pets",  "paymentIntentId", "totalPayment",
+  "languages", "otherLanguage", "pets",  "paymentIntentId", "totalPayment",
   "householdRooms", "householdPeople", "householdTasks", "cooking",  "requestFirstName",
   "requestLastName",
   "requestEmail",
@@ -138,6 +138,8 @@ function mapFrontendToBackend(formData) {
     householdTasks: "householdTasks",
     cookingForPeople: "cooking",
     languages: "languages",
+    languageOther: "otherLanguage",
+    otherLanguage: "otherLanguage",
     hasPets: "pets",
   };
 

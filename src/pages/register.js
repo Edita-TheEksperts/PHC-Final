@@ -30,14 +30,14 @@ export default function RegisterPage() {
 
     if (res.ok) {
       // Show confirmation message
-      setMessage("Registration successful! An email has been sent with further instructions.");
+      setMessage("Registrierung erfolgreich! Eine E-Mail mit weiteren Anweisungen wurde versendet.");
 
       // Redirect to homepage after 3 seconds
       setTimeout(() => {
         router.push("/");
       }, 5000); // Adjust the delay as per your preference (3000ms = 3 seconds)
     } else {
-      setMessage("Something went wrong, please try again.");
+      setMessage("Etwas ist schiefgelaufen, bitte versuchen Sie es erneut.");
     }
   };
 

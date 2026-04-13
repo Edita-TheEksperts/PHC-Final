@@ -8,6 +8,7 @@ export default function NachrichtenPage() {
   const [messageText, setMessageText] = useState("");
   const [sending, setSending] = useState(false);
   const [feedback, setFeedback] = useState(null);
+  const [sentMessages, setSentMessages] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
@@ -19,6 +20,13 @@ export default function NachrichtenPage() {
         if (res.status === 401) { localStorage.removeItem("userToken"); router.replace("/login"); return; }
         const data = await res.json();
         setUserData(data);
+        // Load sent messages (excluding admin task entries)
+        if (data?.id) {
+          fetch(`/api/admin/notes?userId=${data.id}&messagesOnly=true`)
+            .then(r => r.json())
+            .then(d => setSentMessages(d.notes || []))
+            .catch(() => {});
+        }
       } catch {}
     }
     fetchUser();
@@ -41,8 +49,10 @@ export default function NachrichtenPage() {
         }),
       });
       if (res.ok) {
+        const note = await res.json();
         setFeedback({ type: "success", text: "Nachricht gesendet. Wir melden uns so schnell wie möglich bei Ihnen." });
         setMessageText("");
+        setSentMessages(prev => [note, ...prev]);
       } else {
         setFeedback({ type: "error", text: "Fehler beim Senden. Bitte versuchen Sie es erneut." });
       }
@@ -179,6 +189,29 @@ export default function NachrichtenPage() {
                 </div>
               )}
             </div>
+
+            {/* Conversation: own messages + admin replies */}
+            {sentMessages.length > 0 && (
+              <div className="mt-6 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-100">
+                  <h3 className="text-base font-semibold text-gray-900">Nachrichten</h3>
+                </div>
+                <div className="divide-y divide-gray-50 max-h-[400px] overflow-y-auto">
+                  {sentMessages.map(m => {
+                    const isAdmin = m.author === "Admin";
+                    return (
+                      <div key={m.id} className={`px-6 py-3 ${isAdmin ? "bg-blue-50/40" : ""}`}>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className={`text-xs font-medium ${isAdmin ? "text-blue-700" : "text-gray-500"}`}>{isAdmin ? "PHC Team" : m.author}</span>
+                          <span className="text-xs text-gray-400">{new Date(m.createdAt).toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+                        </div>
+                        <p className="text-sm text-gray-800">{m.text}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Info note */}
             <div className="mt-6 bg-gray-50 border border-gray-200 rounded-xl p-4">
