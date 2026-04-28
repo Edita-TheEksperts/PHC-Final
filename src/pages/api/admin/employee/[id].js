@@ -31,16 +31,30 @@ const allowed = [
   // SKILLS
   "languages", "languageOther",
   "specialTrainings", "communicationTraits", "dietaryExperience",
-  "servicesOffered"
+  "servicesOffered",
+
+  // RESIDENCE & PERSONAL DETAILS
+  "residencePermit",
+  "birthDate", "maritalStatus", "ahvNumber", "hasChildren",
 ];
 
+const DATE_FIELDS = new Set(["availabilityFrom", "birthDate"]);
 
     const data = {};
 
     Object.keys(req.body).forEach((key) => {
-      if (allowed.includes(key)) {
-        data[key] = req.body[key];
+      if (!allowed.includes(key)) return;
+      let value = req.body[key];
+      if (DATE_FIELDS.has(key)) {
+        if (value === "" || value === null || value === undefined) {
+          value = null;
+        } else {
+          const d = new Date(value);
+          if (Number.isNaN(d.getTime())) return;
+          value = d;
+        }
       }
+      data[key] = value;
     });
 
     const updated = await prisma.employee.update({

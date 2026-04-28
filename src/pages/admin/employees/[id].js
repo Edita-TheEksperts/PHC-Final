@@ -78,6 +78,10 @@ const [skillsData, setSkillsData] = useState({});
 const [availabilityData, setAvailabilityData] = useState({});
 const [editLicense, setEditLicense] = useState(false);
 const [licenseData, setLicenseData] = useState({});
+const [editPermit, setEditPermit] = useState(false);
+const [permitData, setPermitData] = useState({});
+const [editPersonalDetails, setEditPersonalDetails] = useState(false);
+const [personalDetailsData, setPersonalDetailsData] = useState({});
 
 
 const [einsatzFilter, setEinsatzFilter] = useState("all");
@@ -266,6 +270,30 @@ async function saveConditions() {
   const updated = await res.json();
   setEmployee(updated);
   setEditConditions(false);
+}
+
+async function savePermit() {
+  const res = await fetch(`/api/admin/employee/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(permitData),
+  });
+  const updated = await res.json();
+  setEmployee(updated);
+  setEditPermit(false);
+}
+
+async function savePersonalDetails() {
+  const payload = { ...personalDetailsData };
+  if (payload.birthDate === "") payload.birthDate = null;
+  const res = await fetch(`/api/admin/employee/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const updated = await res.json();
+  setEmployee(updated);
+  setEditPersonalDetails(false);
 }
 
 async function saveSkills() {
@@ -506,12 +534,29 @@ const filteredTermine =
               </InfoCard>
 
               {/* Aufenthaltserlaubnis */}
-              <InfoCard title="Aufenthalt">
+              <InfoCard
+                title="Aufenthalt"
+                onEdit={() => {
+                  setPermitData({ residencePermit: employee.residencePermit || "" });
+                  setEditPermit(true);
+                }}
+              >
                 <InfoRow label="Aufenthaltsbewilligung" value={employee.residencePermit} />
               </InfoCard>
 
               {/* Persönliche Angaben (Finanzen) */}
-              <InfoCard title="Persönliche Angaben">
+              <InfoCard
+                title="Persönliche Angaben"
+                onEdit={() => {
+                  setPersonalDetailsData({
+                    birthDate: employee.birthDate || "",
+                    maritalStatus: employee.maritalStatus || "",
+                    ahvNumber: employee.ahvNumber || "",
+                    hasChildren: employee.hasChildren ?? null,
+                  });
+                  setEditPersonalDetails(true);
+                }}
+              >
                 <InfoRow label="Geburtsdatum" value={employee.birthDate ? new Date(employee.birthDate).toLocaleDateString("de-CH") : null} />
                 <InfoRow label="Zivilstand" value={employee.maritalStatus} />
                 <InfoRow label="AHV-Nummer" value={employee.ahvNumber} />
@@ -921,10 +966,12 @@ const filteredTermine =
         </div>
       )}
 
-      {editAvailability && <EditModal title="Verfügbarkeit" data={availabilityData} onChange={setAvailabilityData} onSave={saveAvailability} onClose={() => setEditAvailability(false)} />}
-      {editServices    && <EditModal title="Dienstleistungen"          data={servicesData}    onChange={setServicesData}    onSave={saveServices}    onClose={() => setEditServices(false)} />}
-      {editSkills      && <EditModal title="Fähigkeiten & Sprachen"    data={skillsData}      onChange={setSkillsData}      onSave={saveSkills}      onClose={() => setEditSkills(false)} />}
-      {editConditions  && <EditModal title="Arbeitsbedingungen"        data={conditionsData}  onChange={setConditionsData}  onSave={saveConditions}  onClose={() => setEditConditions(false)} />}
+      {editAvailability    && <EditModal title="Verfügbarkeit"            data={availabilityData}    onChange={setAvailabilityData}    onSave={saveAvailability}    onClose={() => setEditAvailability(false)} />}
+      {editServices        && <EditModal title="Dienstleistungen"          data={servicesData}        onChange={setServicesData}        onSave={saveServices}        onClose={() => setEditServices(false)} />}
+      {editSkills          && <EditModal title="Fähigkeiten & Sprachen"    data={skillsData}          onChange={setSkillsData}          onSave={saveSkills}          onClose={() => setEditSkills(false)} />}
+      {editConditions      && <EditModal title="Arbeitsbedingungen"        data={conditionsData}      onChange={setConditionsData}      onSave={saveConditions}      onClose={() => setEditConditions(false)} />}
+      {editPermit          && <EditModal title="Aufenthalt"                data={permitData}          onChange={setPermitData}          onSave={savePermit}          onClose={() => setEditPermit(false)} />}
+      {editPersonalDetails && <EditModal title="Persönliche Angaben"       data={personalDetailsData} onChange={setPersonalDetailsData} onSave={savePersonalDetails} onClose={() => setEditPersonalDetails(false)} />}
     </div>
   );
 }
@@ -971,6 +1018,69 @@ const FIELD_LABELS_DE = {
   servicesOffered: "Angebotene Services", specialTrainings: "Spezialausbildungen",
 };
 
+// Field-type maps mirroring employee-register.js so the admin edit modal renders
+// each question with the same control type the employee saw at registration.
+
+// Ja/Nein selects with lowercase values (matches reg form `<option value="ja">`).
+const JA_NEIN_LOWER_FIELDS = new Set([
+  "hasLicense", "hasCar", "carAvailableForWork", "onCallAvailable",
+  "travelSupport", "bodyCareSupport", "worksWithAnimals",
+  "nightShifts", "smoker",
+]);
+
+// Custom <select> options per field (mirrors reg form dropdown values).
+const EMPLOYEE_SELECT_OPTIONS = {
+  country: [
+    { value: "CH", label: "Schweiz (CH)" },
+    { value: "DE", label: "Deutschland (DE)" },
+    { value: "AT", label: "Österreich (AT)" },
+  ],
+  residencePermit: ["CH Pass", "B", "C", "G", "L"].map((v) => ({ value: v, label: v })),
+  licenseType: ["Automat", "Manuell"].map((v) => ({ value: v, label: v })),
+  howFarCanYouTravel: [
+    { value: "0-15km", label: "0–20 km" },
+    { value: "15-30km", label: "20–40 km" },
+    { value: "30km+", label: "40 km+" },
+  ],
+  desiredWeeklyHours: [
+    { value: "40", label: "40h / 100%" },
+    { value: "32", label: "32h / 80%" },
+    { value: "24", label: "24h / 60%" },
+    { value: "16", label: "16h / 40%" },
+    { value: "8", label: "8h / 20%" },
+  ],
+};
+
+// Multi-checkbox lists (data stored as comma-separated string in editData,
+// then split into array on save by the existing save* functions).
+const EMPLOYEE_MULTI_OPTIONS = {
+  languages: ["CH-Deutsch", "Deutsch", "Englisch", "Französisch", "Italienisch"],
+  availabilityDays: ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"],
+  servicesOffered: [
+    "Alltagsbegleitung und Besorgungen",
+    "Freizeit und Soziale Aktivitäten",
+    "Gesundheitsführsorge",
+    "Haushaltshilfe und Wohnpflege",
+  ],
+  specialTrainings: [
+    "Demenz", "Palliative Care", "Psychiatrie", "Onkologie", "Wundpflege",
+  ],
+  communicationTraits: [
+    "Geduldig", "Empathisch", "Humorvoll", "Aktiv zuhörend", "Strukturiert",
+  ],
+  dietaryExperience: [
+    "Vegetarisch", "Vegan", "Glutenfrei", "Laktosefrei", "Diabetiker", "Halal", "Koscher",
+  ],
+};
+
+function parseCsvSet(raw) {
+  if (Array.isArray(raw)) return new Set(raw.map(String));
+  if (typeof raw === "string" && raw.trim()) {
+    return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
+  }
+  return new Set();
+}
+
 function EditModal({ title, data, onChange, onSave, onClose }) {
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
@@ -985,6 +1095,87 @@ function EditModal({ title, data, onChange, onSave, onClose }) {
           {Object.keys(data).map((key) => {
             const label = FIELD_LABELS_DE[key] || key.replace(/([A-Z])/g, " $1").replace(/^./, c => c.toUpperCase());
             const inputCls = "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#04436F]/20";
+
+            // Multi-checkbox (languages, availabilityDays, servicesOffered, etc.) —
+            // matches the reg form checkbox groups. Internal value is comma-separated
+            // so existing save functions can .split(",") it into an array on PATCH.
+            if (EMPLOYEE_MULTI_OPTIONS[key]) {
+              const opts = EMPLOYEE_MULTI_OPTIONS[key];
+              const set = parseCsvSet(data[key]);
+              return (
+                <div key={key}>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
+                  <div className="flex flex-col gap-1">
+                    {opts.map((opt) => (
+                      <label key={opt} className="flex items-center gap-2 text-sm text-gray-800">
+                        <input
+                          type="checkbox"
+                          checked={set.has(opt)}
+                          onChange={() => {
+                            const next = new Set(set);
+                            if (next.has(opt)) next.delete(opt); else next.add(opt);
+                            onChange({ ...data, [key]: Array.from(next).join(", ") });
+                          }}
+                        />
+                        <span>{opt}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              );
+            }
+
+            // Custom-options <select> (country, residencePermit, licenseType, etc.).
+            if (EMPLOYEE_SELECT_OPTIONS[key]) {
+              const opts = EMPLOYEE_SELECT_OPTIONS[key];
+              return (
+                <div key={key}>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
+                  <select
+                    name={key}
+                    className={inputCls}
+                    value={data[key] ?? ""}
+                    onChange={(e) => onChange({ ...data, [key]: e.target.value })}
+                  >
+                    <option value="">Bitte wählen</option>
+                    {opts.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                </div>
+              );
+            }
+
+            // Ja/Nein with lowercase values (reg form uses `value="ja"`/`"nein"`).
+            // hasLicense is stored as boolean in DB — convert both ways.
+            if (JA_NEIN_LOWER_FIELDS.has(key)) {
+              const v = data[key];
+              const selectVal = v === true || v === "ja" ? "ja"
+                              : v === false || v === "nein" ? "nein"
+                              : "";
+              const isBool = typeof v === "boolean";
+              return (
+                <div key={key}>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
+                  <select
+                    name={key}
+                    className={inputCls}
+                    value={selectVal}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      const next = isBool
+                        ? (raw === "ja" ? true : raw === "nein" ? false : null)
+                        : raw;
+                      onChange({ ...data, [key]: next });
+                    }}
+                  >
+                    <option value="">Bitte wählen</option>
+                    <option value="ja">Ja</option>
+                    <option value="nein">Nein</option>
+                  </select>
+                </div>
+              );
+            }
+
+            // Shared SELECT_FIELDS (salutation, canton, maritalStatus, frequency, etc.).
             const options = SELECT_FIELDS[key];
             if (options) {
               return (
@@ -1021,13 +1212,28 @@ function EditModal({ title, data, onChange, onSave, onClose }) {
                 </div>
               );
             }
-            if (key === "birthDate") {
+            if (key === "birthDate" || key === "availabilityFrom") {
               const v = data[key] ? new Date(data[key]).toISOString().slice(0, 10) : "";
               return (
                 <div key={key}>
                   <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
                   <input type="date" name={key} className={inputCls} value={v}
                     onChange={(e) => onChange({ ...data, [key]: e.target.value || null })} />
+                </div>
+              );
+            }
+            if (key === "experienceYears" || key === "zipCode" || key === "houseNumber") {
+              return (
+                <div key={key}>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
+                  <input
+                    type="number"
+                    name={key}
+                    className={inputCls}
+                    value={data[key] ?? ""}
+                    onChange={(e) => onChange({ ...data, [key]: e.target.value })}
+                    placeholder={label}
+                  />
                 </div>
               );
             }

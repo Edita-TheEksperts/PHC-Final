@@ -309,6 +309,8 @@ const ALLOWED_FIELDS = useMemo(
     "householdPeople",
     "householdTasks",
     "pets",
+    "basicCareNeeds",
+    "basicCareOtherField",
 
     // =====================
     // Activities / Freizeit
@@ -484,11 +486,14 @@ lastName: "Nachname",
   }
 
   function normalizeForInput(key, value) {
-    // keep booleans as booleans, numbers as numbers, strings as strings
+    // keep booleans as booleans, numbers as numbers, strings as strings,
+    // and preserve objects/arrays for multi-checkbox + householdTasks (JSON).
     if (value === null || value === undefined) return "";
     if (typeof value === "boolean") return value;
     if (typeof value === "number") return value;
     if (typeof value === "string") return value;
+    if (Array.isArray(value)) return value.join(", ");
+    if (typeof value === "object") return value;
     return "";
   }
 
@@ -515,7 +520,72 @@ lastName: "Nachname",
   // edit views share the same field types as the registration funnel.
   const SELECT_OPTIONS = SELECT_FIELDS;
 
+  // Multi-checkbox option lists — mirrors RegisterForm1/3/4 so admin edit shows
+  // the exact same checkbox sets the client saw at registration. Values are stored
+  // as comma-separated strings (matching Form4's .join(", ") DB shape).
+  const MULTI_CHECKBOX_OPTIONS = {
+    mobility: [
+      "vollständig mobil", "sturzgefährdet", "Bettlägerig",
+      "Hilfe beim Aufstehen", "Hilfe beim Toilettengang", "Hilfe beim Umlagern",
+    ],
+    mobilityAids: [
+      "Gehstock", "Rollator", "Rollstuhl", "Hebesitz",
+      "Pflegebett", "Patientenlift", "Badewannenlift", "Toilettenstuhl",
+    ],
+    toolsAvailable: [
+      "Gehstock", "Rollator", "Rollstuhl", "Hebesitz",
+      "Pflegebett", "Patientenlift", "Badewannenlift", "Toilettenstuhl",
+    ],
+    incontinenceTypes: ["Urin", "Stuhl", "Dauerkatheter", "Stoma"],
+    foodSupportTypes: [
+      "Unterstützung notwendig", "Nahrung anreichen notwendig",
+      "Flüssigkeitsaufnahme kontrollieren", "Probleme beim Schlucken", "Appetitlosigkeit",
+    ],
+    basicCareNeeds: ["Körperhygiene", "An-/Auskleiden"],
+    mentalDiagnoses: [
+      "Depressionen", "Demenz-Diagnose", "Alzheimer-Diagnose",
+      "Gestörter Tag-/Nachtrhythmus", "Weglauf Tendenz", "Persönlichkeitsveränderungen",
+      "Aggressivität", "Apathie", "Starke Unruhe",
+    ],
+    behaviorTraits: [
+      "Aggressivität", "Apathie", "Starke Unruhe",
+      "Weglauf Tendenz", "Persönlichkeitsveränderungen", "Gestörter Tag-/Nachtrhythmus",
+    ],
+    appointmentTypes: ["Arzt", "Physiotherapie", "Behörde"],
+    shoppingItems: ["Lebensmittel", "Apotheke", "Garten", "Kleidung"],
+  };
+
+  // Communication sense select — from RegisterForm3 (Sehen / Hören / Sprechen).
+  const COMM_OPTIONS_BY_FIELD = {
+    communicationSehen: [
+      { value: "gut", label: "Keine Probleme" },
+      { value: "eingeschränkt", label: "Eingeschränkt" },
+      { value: "schlecht", label: "Nahezu blind" },
+    ],
+    communicationHören: [
+      { value: "gut", label: "Keine Probleme" },
+      { value: "eingeschränkt", label: "Eingeschränkt" },
+      { value: "schlecht", label: "Nahezu taub" },
+    ],
+    communicationSprechen: [
+      { value: "gut", label: "Keine Probleme" },
+      { value: "eingeschränkt", label: "Eingeschränkt" },
+      { value: "schlecht", label: "Kaum möglich" },
+    ],
+  };
+
+  // householdTasks is JSON in Prisma — Form1 stores { [taskName]: { answer, details, extra } }.
+  const HOUSEHOLD_TASKS_LIST = [
+    "Balkon und Blumenpflege", "Waschen / Bügeln", "Kochen", "Fenster Putzen",
+    "Bettwäsche wechseln", "Aufräumen", "Trennung / Entsorgung Abfall",
+    "Kleider waschen/Bügeln/verräumen", "Abstauben", "Staubsaugen",
+    "Boden wischen", "Vorhänge reinigen",
+  ];
+
   function inferFieldType(key, value) {
+    if (key === "householdTasks") return "household-tasks";
+    if (COMM_OPTIONS_BY_FIELD[key]) return "comm-select";
+    if (MULTI_CHECKBOX_OPTIONS[key]) return "multi";
     if (typeof value === "boolean") return "boolean";
     if (typeof value === "number") return "number";
     if (JA_NEIN_FIELDS.has(key)) return "janein";
@@ -523,15 +593,143 @@ lastName: "Nachname",
     return "string";
   }
 
+  // Parse a stored multi-value (comma-separated string OR array) into Set<string>.
+  function parseMultiValue(raw) {
+    if (Array.isArray(raw)) return new Set(raw.map(String));
+    if (typeof raw === "string" && raw.trim()) {
+      return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
+    }
+    return new Set();
+  }
+
 const InputField = memo(function InputField({ fieldKey, value }) {
   const canEdit = ALLOWED_SET.has(fieldKey);
   const type = inferFieldType(fieldKey, value);
 
   if (!isEditing || !canEdit) {
+    if (type === "multi") {
+      const set = parseMultiValue(value);
+      return (
+        <span className="text-gray-900 break-words text-right flex-1">
+          {set.size ? Array.from(set).join(", ") : "—"}
+        </span>
+      );
+    }
+    if (type === "comm-select") {
+      const opt = COMM_OPTIONS_BY_FIELD[fieldKey].find((o) => o.value === value);
+      return (
+        <span className="text-gray-900 break-words text-right flex-1">
+          {opt ? opt.label : (value || "—")}
+        </span>
+      );
+    }
+    if (type === "household-tasks") {
+      const obj = (value && typeof value === "object") ? value : {};
+      const entries = Object.entries(obj).filter(([, v]) => v && v.answer);
+      return (
+        <span className="text-gray-900 break-words text-right flex-1">
+          {entries.length
+            ? entries.map(([k, v]) => `${k}: ${v.answer}`).join(", ")
+            : "—"}
+        </span>
+      );
+    }
     return (
       <span className="text-gray-900 break-words text-right flex-1">
         {formatPrimitiveValue(fieldKey, value)}
       </span>
+    );
+  }
+
+  if (type === "multi") {
+    const options = MULTI_CHECKBOX_OPTIONS[fieldKey];
+    const current = parseMultiValue(formData[fieldKey]);
+    return (
+      <div className="w-full max-w-[520px] flex flex-col gap-1">
+        {options.map((opt) => (
+          <label key={opt} className="flex items-center gap-2 text-gray-900">
+            <input
+              type="checkbox"
+              checked={current.has(opt)}
+              onChange={() => {
+                const next = new Set(current);
+                if (next.has(opt)) next.delete(opt); else next.add(opt);
+                setFormData((p) => ({
+                  ...p,
+                  [fieldKey]: Array.from(next).join(", "),
+                }));
+              }}
+            />
+            <span>{opt}</span>
+          </label>
+        ))}
+      </div>
+    );
+  }
+
+  if (type === "comm-select") {
+    const options = COMM_OPTIONS_BY_FIELD[fieldKey];
+    return (
+      <select
+        key={fieldKey}
+        className="w-full max-w-[420px] border rounded-lg px-3 py-2 text-gray-900"
+        defaultValue={formData[fieldKey] ?? ""}
+        onChange={(e) => setFormData((p) => ({ ...p, [fieldKey]: e.target.value }))}
+      >
+        <option value="">Bitte wählen</option>
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>{o.label}</option>
+        ))}
+      </select>
+    );
+  }
+
+  if (type === "household-tasks") {
+    const current = (formData[fieldKey] && typeof formData[fieldKey] === "object")
+      ? formData[fieldKey]
+      : {};
+    const updateTask = (task, patch) => {
+      setFormData((p) => ({
+        ...p,
+        [fieldKey]: {
+          ...(p[fieldKey] && typeof p[fieldKey] === "object" ? p[fieldKey] : {}),
+          [task]: { ...(current[task] || {}), ...patch },
+        },
+      }));
+    };
+    return (
+      <div className="w-full max-w-[520px] flex flex-col gap-3">
+        {HOUSEHOLD_TASKS_LIST.map((task) => (
+          <div key={task} className="flex flex-col gap-1">
+            <span className="text-sm font-medium text-gray-700">{task}</span>
+            <select
+              className="w-full border rounded-lg px-3 py-2 text-gray-900"
+              defaultValue={current[task]?.answer || ""}
+              onChange={(e) => updateTask(task, { answer: e.target.value })}
+            >
+              <option value="">Bitte wählen</option>
+              <option value="Ja">Ja</option>
+              <option value="Nein">Nein</option>
+            </select>
+            {task === "Kochen" && (
+              <input
+                type="text"
+                placeholder="Für wieviele Personen?"
+                className="w-full border rounded-lg px-3 py-2 text-gray-900"
+                defaultValue={current[task]?.extra || ""}
+                onBlur={(e) => updateTask(task, { extra: e.target.value })}
+              />
+            )}
+            <input
+              type="text"
+              placeholder="Weitere Details (optional)"
+              className="w-full border rounded-lg px-3 py-2 text-gray-900"
+              defaultValue={current[task]?.details || ""}
+              onBlur={(e) => updateTask(task, { details: e.target.value })}
+            />
+          </div>
+        ))}
+      </div>
     );
   }
 
