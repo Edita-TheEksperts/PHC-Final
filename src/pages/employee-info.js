@@ -1,7 +1,16 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import EmployeeLayout from "../components/EmployeeLayout";
-import { SELECT_FIELDS } from "../lib/formOptions";
+import {
+  SELECT_FIELDS,
+  EMPLOYEE_JA_NEIN_LOWER,
+  EMPLOYEE_SELECT_OPTIONS,
+  EMPLOYEE_MULTI_OPTIONS,
+  parseCsvSet,
+} from "../lib/formOptions";
+
+const DATE_FIELDS = new Set(["availabilityFrom", "birthDate"]);
+const NUMBER_FIELDS = new Set(["experienceYears", "zipCode", "houseNumber"]);
 
 const fileFields = ["cvFile", "profilePhoto", "passportFile", "passportBackFile", "visaFile", "drivingLicenceFile", "policeLetterFile", "certificateFile"];
 
@@ -268,7 +277,69 @@ export default function EmployeeInfo() {
                         <span className="text-sm text-gray-400">Keine Datei</span>
                       )
                     ) : editMode ? (
-                      SELECT_FIELDS[key] ? (
+                      EMPLOYEE_MULTI_OPTIONS[key] ? (
+                        // Multi-checkbox group (languages, availabilityDays, servicesOffered, etc.)
+                        <div className="flex flex-col gap-1">
+                          {(() => {
+                            const set = parseCsvSet(value);
+                            return EMPLOYEE_MULTI_OPTIONS[key].map((opt) => (
+                              <label key={opt} className="flex items-center gap-2 text-sm text-gray-800">
+                                <input
+                                  type="checkbox"
+                                  checked={set.has(opt)}
+                                  onChange={() => {
+                                    const next = new Set(set);
+                                    if (next.has(opt)) next.delete(opt); else next.add(opt);
+                                    setFormData((prev) => ({
+                                      ...prev,
+                                      [key]: Array.isArray(prev[key])
+                                        ? Array.from(next)
+                                        : Array.from(next).join(", "),
+                                    }));
+                                  }}
+                                />
+                                <span>{opt}</span>
+                              </label>
+                            ));
+                          })()}
+                        </div>
+                      ) : EMPLOYEE_SELECT_OPTIONS[key] ? (
+                        <select
+                          className={inputCls}
+                          value={value ?? ""}
+                          onChange={e => setFormData(prev => ({ ...prev, [key]: e.target.value }))}
+                        >
+                          <option value="">Bitte wählen</option>
+                          {EMPLOYEE_SELECT_OPTIONS[key].map(o => (
+                            <option key={o.value} value={o.value}>{o.label}</option>
+                          ))}
+                        </select>
+                      ) : EMPLOYEE_JA_NEIN_LOWER.has(key) ? (
+                        // Ja/Nein with lowercase values (matches reg form). hasLicense is bool in DB.
+                        (() => {
+                          const isBool = typeof value === "boolean";
+                          const selectVal = value === true || value === "ja" ? "ja"
+                                         : value === false || value === "nein" ? "nein"
+                                         : "";
+                          return (
+                            <select
+                              className={inputCls}
+                              value={selectVal}
+                              onChange={(e) => {
+                                const raw = e.target.value;
+                                const next = isBool
+                                  ? (raw === "ja" ? true : raw === "nein" ? false : null)
+                                  : raw;
+                                setFormData((prev) => ({ ...prev, [key]: next }));
+                              }}
+                            >
+                              <option value="">Bitte wählen</option>
+                              <option value="ja">Ja</option>
+                              <option value="nein">Nein</option>
+                            </select>
+                          );
+                        })()
+                      ) : SELECT_FIELDS[key] ? (
                         <select
                           className={inputCls}
                           value={value ?? ""}
@@ -277,6 +348,20 @@ export default function EmployeeInfo() {
                           <option value="">Bitte wählen</option>
                           {SELECT_FIELDS[key].map(o => <option key={o} value={o}>{o}</option>)}
                         </select>
+                      ) : DATE_FIELDS.has(key) ? (
+                        <input
+                          type="date"
+                          className={inputCls}
+                          value={value ? new Date(value).toISOString().slice(0, 10) : ""}
+                          onChange={e => setFormData(prev => ({ ...prev, [key]: e.target.value || null }))}
+                        />
+                      ) : NUMBER_FIELDS.has(key) ? (
+                        <input
+                          type="number"
+                          className={inputCls}
+                          value={value ?? ""}
+                          onChange={e => setFormData(prev => ({ ...prev, [key]: e.target.value }))}
+                        />
                       ) : (
                         <input
                           className={inputCls}

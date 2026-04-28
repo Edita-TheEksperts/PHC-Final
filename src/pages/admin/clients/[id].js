@@ -2,7 +2,14 @@
 import { useEffect, useMemo, useState, memo, useCallback } from "react";
 
 import { useRouter } from "next/router";
-import { SELECT_FIELDS, JA_NEIN_FIELDS } from "../../../lib/formOptions";
+import {
+  SELECT_FIELDS,
+  JA_NEIN_FIELDS,
+  CLIENT_MULTI_OPTIONS,
+  CLIENT_COMM_OPTIONS,
+  CLIENT_HOUSEHOLD_TASKS,
+  parseCsvSet,
+} from "../../../lib/formOptions";
 
 const CLIENT_STATUSES = ["open", "aktiv", "inaktiv", "storniert", "gekuendigt"];
 
@@ -516,90 +523,20 @@ lastName: "Nachname",
     );
   }
 
-  // Picklists and Ja/Nein fields live in src/lib/formOptions.js so admin/client/employee
-  // edit views share the same field types as the registration funnel.
+  // Picklists, Ja/Nein, multi-checkbox, communication, and household-task option
+  // sets live in src/lib/formOptions.js so admin/self-service edit views share
+  // the same field types as the registration funnel.
   const SELECT_OPTIONS = SELECT_FIELDS;
-
-  // Multi-checkbox option lists — mirrors RegisterForm1/3/4 so admin edit shows
-  // the exact same checkbox sets the client saw at registration. Values are stored
-  // as comma-separated strings (matching Form4's .join(", ") DB shape).
-  const MULTI_CHECKBOX_OPTIONS = {
-    mobility: [
-      "vollständig mobil", "sturzgefährdet", "Bettlägerig",
-      "Hilfe beim Aufstehen", "Hilfe beim Toilettengang", "Hilfe beim Umlagern",
-    ],
-    mobilityAids: [
-      "Gehstock", "Rollator", "Rollstuhl", "Hebesitz",
-      "Pflegebett", "Patientenlift", "Badewannenlift", "Toilettenstuhl",
-    ],
-    toolsAvailable: [
-      "Gehstock", "Rollator", "Rollstuhl", "Hebesitz",
-      "Pflegebett", "Patientenlift", "Badewannenlift", "Toilettenstuhl",
-    ],
-    incontinenceTypes: ["Urin", "Stuhl", "Dauerkatheter", "Stoma"],
-    foodSupportTypes: [
-      "Unterstützung notwendig", "Nahrung anreichen notwendig",
-      "Flüssigkeitsaufnahme kontrollieren", "Probleme beim Schlucken", "Appetitlosigkeit",
-    ],
-    basicCareNeeds: ["Körperhygiene", "An-/Auskleiden"],
-    mentalDiagnoses: [
-      "Depressionen", "Demenz-Diagnose", "Alzheimer-Diagnose",
-      "Gestörter Tag-/Nachtrhythmus", "Weglauf Tendenz", "Persönlichkeitsveränderungen",
-      "Aggressivität", "Apathie", "Starke Unruhe",
-    ],
-    behaviorTraits: [
-      "Aggressivität", "Apathie", "Starke Unruhe",
-      "Weglauf Tendenz", "Persönlichkeitsveränderungen", "Gestörter Tag-/Nachtrhythmus",
-    ],
-    appointmentTypes: ["Arzt", "Physiotherapie", "Behörde"],
-    shoppingItems: ["Lebensmittel", "Apotheke", "Garten", "Kleidung"],
-  };
-
-  // Communication sense select — from RegisterForm3 (Sehen / Hören / Sprechen).
-  const COMM_OPTIONS_BY_FIELD = {
-    communicationSehen: [
-      { value: "gut", label: "Keine Probleme" },
-      { value: "eingeschränkt", label: "Eingeschränkt" },
-      { value: "schlecht", label: "Nahezu blind" },
-    ],
-    communicationHören: [
-      { value: "gut", label: "Keine Probleme" },
-      { value: "eingeschränkt", label: "Eingeschränkt" },
-      { value: "schlecht", label: "Nahezu taub" },
-    ],
-    communicationSprechen: [
-      { value: "gut", label: "Keine Probleme" },
-      { value: "eingeschränkt", label: "Eingeschränkt" },
-      { value: "schlecht", label: "Kaum möglich" },
-    ],
-  };
-
-  // householdTasks is JSON in Prisma — Form1 stores { [taskName]: { answer, details, extra } }.
-  const HOUSEHOLD_TASKS_LIST = [
-    "Balkon und Blumenpflege", "Waschen / Bügeln", "Kochen", "Fenster Putzen",
-    "Bettwäsche wechseln", "Aufräumen", "Trennung / Entsorgung Abfall",
-    "Kleider waschen/Bügeln/verräumen", "Abstauben", "Staubsaugen",
-    "Boden wischen", "Vorhänge reinigen",
-  ];
 
   function inferFieldType(key, value) {
     if (key === "householdTasks") return "household-tasks";
-    if (COMM_OPTIONS_BY_FIELD[key]) return "comm-select";
-    if (MULTI_CHECKBOX_OPTIONS[key]) return "multi";
+    if (CLIENT_COMM_OPTIONS[key]) return "comm-select";
+    if (CLIENT_MULTI_OPTIONS[key]) return "multi";
     if (typeof value === "boolean") return "boolean";
     if (typeof value === "number") return "number";
     if (JA_NEIN_FIELDS.has(key)) return "janein";
     if (SELECT_OPTIONS[key]) return "select";
     return "string";
-  }
-
-  // Parse a stored multi-value (comma-separated string OR array) into Set<string>.
-  function parseMultiValue(raw) {
-    if (Array.isArray(raw)) return new Set(raw.map(String));
-    if (typeof raw === "string" && raw.trim()) {
-      return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
-    }
-    return new Set();
   }
 
 const InputField = memo(function InputField({ fieldKey, value }) {
@@ -608,7 +545,7 @@ const InputField = memo(function InputField({ fieldKey, value }) {
 
   if (!isEditing || !canEdit) {
     if (type === "multi") {
-      const set = parseMultiValue(value);
+      const set = parseCsvSet(value);
       return (
         <span className="text-gray-900 break-words text-right flex-1">
           {set.size ? Array.from(set).join(", ") : "—"}
@@ -616,7 +553,7 @@ const InputField = memo(function InputField({ fieldKey, value }) {
       );
     }
     if (type === "comm-select") {
-      const opt = COMM_OPTIONS_BY_FIELD[fieldKey].find((o) => o.value === value);
+      const opt = CLIENT_COMM_OPTIONS[fieldKey].find((o) => o.value === value);
       return (
         <span className="text-gray-900 break-words text-right flex-1">
           {opt ? opt.label : (value || "—")}
@@ -642,8 +579,8 @@ const InputField = memo(function InputField({ fieldKey, value }) {
   }
 
   if (type === "multi") {
-    const options = MULTI_CHECKBOX_OPTIONS[fieldKey];
-    const current = parseMultiValue(formData[fieldKey]);
+    const options = CLIENT_MULTI_OPTIONS[fieldKey];
+    const current = parseCsvSet(formData[fieldKey]);
     return (
       <div className="w-full max-w-[520px] flex flex-col gap-1">
         {options.map((opt) => (
@@ -668,7 +605,7 @@ const InputField = memo(function InputField({ fieldKey, value }) {
   }
 
   if (type === "comm-select") {
-    const options = COMM_OPTIONS_BY_FIELD[fieldKey];
+    const options = CLIENT_COMM_OPTIONS[fieldKey];
     return (
       <select
         key={fieldKey}
@@ -699,7 +636,7 @@ const InputField = memo(function InputField({ fieldKey, value }) {
     };
     return (
       <div className="w-full max-w-[520px] flex flex-col gap-3">
-        {HOUSEHOLD_TASKS_LIST.map((task) => (
+        {CLIENT_HOUSEHOLD_TASKS.map((task) => (
           <div key={task} className="flex flex-col gap-1">
             <span className="text-sm font-medium text-gray-700">{task}</span>
             <select

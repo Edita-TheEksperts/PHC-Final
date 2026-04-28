@@ -1,6 +1,12 @@
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
-import { SELECT_FIELDS, MARITAL_STATUSES } from "../../../lib/formOptions";
+import {
+  SELECT_FIELDS,
+  EMPLOYEE_JA_NEIN_LOWER,
+  EMPLOYEE_SELECT_OPTIONS,
+  EMPLOYEE_MULTI_OPTIONS,
+  parseCsvSet,
+} from "../../../lib/formOptions";
 
 const EMPLOYEE_STATUSES = ["pending", "approved", "rejected", "inaktiv"];
 
@@ -1018,68 +1024,8 @@ const FIELD_LABELS_DE = {
   servicesOffered: "Angebotene Services", specialTrainings: "Spezialausbildungen",
 };
 
-// Field-type maps mirroring employee-register.js so the admin edit modal renders
-// each question with the same control type the employee saw at registration.
-
-// Ja/Nein selects with lowercase values (matches reg form `<option value="ja">`).
-const JA_NEIN_LOWER_FIELDS = new Set([
-  "hasLicense", "hasCar", "carAvailableForWork", "onCallAvailable",
-  "travelSupport", "bodyCareSupport", "worksWithAnimals",
-  "nightShifts", "smoker",
-]);
-
-// Custom <select> options per field (mirrors reg form dropdown values).
-const EMPLOYEE_SELECT_OPTIONS = {
-  country: [
-    { value: "CH", label: "Schweiz (CH)" },
-    { value: "DE", label: "Deutschland (DE)" },
-    { value: "AT", label: "Österreich (AT)" },
-  ],
-  residencePermit: ["CH Pass", "B", "C", "G", "L"].map((v) => ({ value: v, label: v })),
-  licenseType: ["Automat", "Manuell"].map((v) => ({ value: v, label: v })),
-  howFarCanYouTravel: [
-    { value: "0-15km", label: "0–20 km" },
-    { value: "15-30km", label: "20–40 km" },
-    { value: "30km+", label: "40 km+" },
-  ],
-  desiredWeeklyHours: [
-    { value: "40", label: "40h / 100%" },
-    { value: "32", label: "32h / 80%" },
-    { value: "24", label: "24h / 60%" },
-    { value: "16", label: "16h / 40%" },
-    { value: "8", label: "8h / 20%" },
-  ],
-};
-
-// Multi-checkbox lists (data stored as comma-separated string in editData,
-// then split into array on save by the existing save* functions).
-const EMPLOYEE_MULTI_OPTIONS = {
-  languages: ["CH-Deutsch", "Deutsch", "Englisch", "Französisch", "Italienisch"],
-  availabilityDays: ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"],
-  servicesOffered: [
-    "Alltagsbegleitung und Besorgungen",
-    "Freizeit und Soziale Aktivitäten",
-    "Gesundheitsführsorge",
-    "Haushaltshilfe und Wohnpflege",
-  ],
-  specialTrainings: [
-    "Demenz", "Palliative Care", "Psychiatrie", "Onkologie", "Wundpflege",
-  ],
-  communicationTraits: [
-    "Geduldig", "Empathisch", "Humorvoll", "Aktiv zuhörend", "Strukturiert",
-  ],
-  dietaryExperience: [
-    "Vegetarisch", "Vegan", "Glutenfrei", "Laktosefrei", "Diabetiker", "Halal", "Koscher",
-  ],
-};
-
-function parseCsvSet(raw) {
-  if (Array.isArray(raw)) return new Set(raw.map(String));
-  if (typeof raw === "string" && raw.trim()) {
-    return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
-  }
-  return new Set();
-}
+// Field-type option maps live in src/lib/formOptions.js so admin/self-service
+// edit views share the same field types as employee-register.js.
 
 function EditModal({ title, data, onChange, onSave, onClose }) {
   return (
@@ -1146,7 +1092,7 @@ function EditModal({ title, data, onChange, onSave, onClose }) {
 
             // Ja/Nein with lowercase values (reg form uses `value="ja"`/`"nein"`).
             // hasLicense is stored as boolean in DB — convert both ways.
-            if (JA_NEIN_LOWER_FIELDS.has(key)) {
+            if (EMPLOYEE_JA_NEIN_LOWER.has(key)) {
               const v = data[key];
               const selectVal = v === true || v === "ja" ? "ja"
                               : v === false || v === "nein" ? "nein"
