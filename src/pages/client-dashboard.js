@@ -67,6 +67,8 @@ const [activeTab, setActiveTab] = useState("dashboard");
 const [updatedData, setUpdatedData] = useState({});
 const [showAppointments, setShowAppointments] = useState(true);
 const [terminePage, setTerminePage] = useState(0);
+const [showAllTermine, setShowAllTermine] = useState(false);
+const TERMINE_PAGE_SIZE = 4;
 const [showHistory, setShowHistory] = useState(false);
 const [showUserInfo, setShowUserInfo] = useState(true);
 const [showVacations, setShowVacations] = useState(true);
@@ -84,9 +86,9 @@ const [showBooking, setShowBooking] = useState(true);
   // ── NEW FEATURE STATE ──
   const [clientDetails, setClientDetails] = useState(null);
   const [cancelConfirm, setCancelConfirm] = useState(null); // { id, date, hours }
-  const [voucherCode, setVoucherCode] = useState("");
-  const [voucherResult, setVoucherResult] = useState(null);
-  const [voucherLoading, setVoucherLoading] = useState(false);
+  // F-30: voucher redemption UI lives canonically in /dashboard/finanzen.
+  // The booking-time voucher (bookingVoucher* below) stays here — it's a
+  // different surface (apply discount to in-progress booking, not redeem).
   const [ratingModal, setRatingModal] = useState(null); // { employeeId, employeeName, appointmentId }
   const [ratingData, setRatingData] = useState({ rating: 0, comment: "" });
   const [ratingLoading, setRatingLoading] = useState(false);
@@ -277,39 +279,24 @@ useEffect(() => {
     } catch {}
   };
 
-  // Refund % based on days until appointment
-  const getRefundInfo = (dateStr) => {
-    if (!dateStr) return { pct: 0, label: "Keine Rückerstattung" };
+  // Cancellation fee (Stornogebühr) based on days until appointment.
+  //  >14 Tage Vorlauf : 0% Stornogebühr (volle Rückerstattung)
+  //  7–14 Tage Vorlauf: 50% Stornogebühr
+  //  < 7 Tage Vorlauf : 100% Stornogebühr
+  // pct = portion of the booking that we keep as fee.
+  // refundPct = 100 - pct (kept around so existing refund-amount calc stays valid).
+  const getCancellationFeeInfo = (dateStr) => {
+    if (!dateStr) return { pct: 100, refundPct: 0, label: "100% Stornogebühr", color: "text-red-600", note: "Keine Datumsangabe" };
     const days = Math.ceil((new Date(dateStr) - new Date()) / (1000 * 60 * 60 * 24));
-    if (days > 14) return { pct: 100, label: "100% Rückerstattung", color: "text-green-600" };
-    if (days > 7)  return { pct: 50,  label: "50% Rückerstattung",  color: "text-amber-600" };
-    return           { pct: 0,   label: "Keine Rückerstattung",  color: "text-red-600" };
+    if (days > 14) return { pct: 0,   refundPct: 100, label: "Kostenlose Stornierung", color: "text-green-600", note: "Mehr als 14 Tage Vorlauf → keine Stornogebühr" };
+    if (days > 7)  return { pct: 50,  refundPct: 50,  label: "50% Stornogebühr",       color: "text-amber-600", note: "7–14 Tage Vorlauf → 50% Stornogebühr" };
+    return           { pct: 100, refundPct: 0,   label: "100% Stornogebühr",      color: "text-red-600",   note: "Weniger als 7 Tage Vorlauf → volle Stornogebühr" };
   };
 
   const handleCancelConfirmed = async () => {
     if (!cancelConfirm) return;
     await cancelAppointment(cancelConfirm.id);
     setCancelConfirm(null);
-  };
-
-  const handleVoucherSubmit = async () => {
-    if (!voucherCode.trim()) return;
-    setVoucherLoading(true);
-    setVoucherResult(null);
-    try {
-      const res = await fetch("/api/vouchers/use", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: voucherCode.trim(), userId: userData?.id }),
-      });
-      const data = await res.json();
-      setVoucherResult({ success: res.ok, ...data });
-      if (res.ok) setVoucherCode("");
-    } catch {
-      setVoucherResult({ success: false, error: "Netzwerkfehler. Bitte erneut versuchen." });
-    } finally {
-      setVoucherLoading(false);
-    }
   };
 
   const handleRatingSubmit = async () => {
@@ -828,11 +815,19 @@ await fetchAppointments(userId);
   const todayFormatted = new Date().toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
   const activeAppointments = appointments.filter((a) => a.status === "active");
 
+  // Menu spec (Bettina, 26.01.2026): Dashboard, Persönliche Info, Finanzen,
+  // Meine Verträge, Neue Buchung, Kündigung, Nachrichten & Feedback, Kontakt.
+  // Items without a dedicated page point to the closest existing destination
+  // until those pages exist.
   const navItems = [
     { label: "Dashboard", path: "/client-dashboard", icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" },
-    { label: "Persönliche Informationen", path: "/dashboard/formular", icon: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" },
+    { label: "Persönliche Info", path: "/dashboard/formular", icon: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" },
     { label: "Finanzen", path: "/dashboard/finanzen", icon: "M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" },
+    { label: "Meine Verträge", path: "/dashboard/finanzen#vertraege", icon: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" },
+    { label: "Neue Buchung", path: "/client-dashboard#neue-buchung", icon: "M12 4v16m8-8H4" },
+    { label: "Kündigung", path: "/dashboard/kundigung", icon: "M6 18L18 6M6 6l12 12" },
     { label: "Nachrichten & Feedback", path: "/dashboard/nachrichten", icon: "M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" },
+    { label: "Kontakt", path: "/contact", icon: "M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" },
   ];
 
   return (
@@ -1070,7 +1065,10 @@ await fetchAppointments(userId);
                 </div>
                 <div className="p-4 space-y-3">
                   {activeAppointments.length > 0 ? (
-                    activeAppointments.slice(terminePage * 6, terminePage * 6 + 6).map((appt) => {
+                    (showAllTermine
+                      ? activeAppointments
+                      : activeAppointments.slice(0, TERMINE_PAGE_SIZE)
+                    ).map((appt) => {
                       const days = daysUntil(appt.date);
                       return (
                         <div key={appt.id} className="p-4 bg-gray-50 rounded-xl border border-gray-100 hover:border-[#B99B5F]/30 hover:bg-[#B99B5F]/5 transition group">
@@ -1102,11 +1100,38 @@ await fetchAppointments(userId);
                                   {appt.serviceName}
                                 </span>
                               )}
-                              <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full border ${
-                                appt.employee ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-amber-50 text-amber-700 border-amber-200"
-                              }`}>
-                                {appt.employee ? "bestätigt" : "wird organisiert"}
-                              </span>
+                              {appt.subServiceName && (
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {appt.subServiceName.split(",").map(s => s.trim()).filter(Boolean).map((sub, idx) => (
+                                    <span key={idx} className="text-[10px] bg-[#B99B5F]/10 text-[#8a7040] border border-[#B99B5F]/20 px-1.5 py-0.5 rounded-full">
+                                      {sub}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                              {(() => {
+                                // F-20: three states so the customer sees real progress
+                                //   • wird organisiert — no MA picked yet
+                                //   • zugewiesen — MA assigned but hasn't accepted the Anfrage
+                                //   • bestätigt — MA confirmed the Einsatz
+                                const matchedAssignment = (clientDetails?.assignments || []).find(
+                                  a => a.status === "active" && (a.scheduleId == null || a.scheduleId === appt.id)
+                                );
+                                const isConfirmed = !!appt.employee || matchedAssignment?.confirmationStatus === "confirmed";
+                                const isAssigned = !isConfirmed && (!!matchedAssignment || (clientDetails?.assignments || []).some(
+                                  a => a.status === "active" && (a.scheduleId == null || a.scheduleId === appt.id)
+                                ));
+                                const cfg = isConfirmed
+                                  ? { label: "bestätigt", style: "bg-emerald-50 text-emerald-700 border-emerald-200" }
+                                  : isAssigned
+                                    ? { label: "zugewiesen", style: "bg-blue-50 text-blue-700 border-blue-200" }
+                                    : { label: "wird organisiert", style: "bg-amber-50 text-amber-700 border-amber-200" };
+                                return (
+                                  <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full border ${cfg.style}`}>
+                                    {cfg.label}
+                                  </span>
+                                );
+                              })()}
                             </div>
                             <div className="flex flex-col gap-1.5 flex-shrink-0">
                               <button
@@ -1135,18 +1160,15 @@ await fetchAppointments(userId);
                       <p className="text-xs text-gray-300 mt-1">Buchen Sie Ihren ersten Termin</p>
                     </div>
                   )}
-                  {activeAppointments.length > 6 && (
-                    <div className="flex items-center justify-between pt-2">
-                      <button disabled={terminePage === 0} onClick={() => setTerminePage(p => p - 1)}
-                        className="text-xs font-medium text-[#B99B5F] hover:underline disabled:text-gray-300 disabled:no-underline">
-                        Zurück
-                      </button>
-                      <span className="text-xs text-gray-400">
-                        {terminePage * 6 + 1}–{Math.min((terminePage + 1) * 6, activeAppointments.length)} von {activeAppointments.length}
-                      </span>
-                      <button disabled={(terminePage + 1) * 6 >= activeAppointments.length} onClick={() => setTerminePage(p => p + 1)}
-                        className="text-xs font-medium text-[#B99B5F] hover:underline disabled:text-gray-300 disabled:no-underline">
-                        Weiter
+                  {activeAppointments.length > TERMINE_PAGE_SIZE && (
+                    <div className="flex items-center justify-center pt-2">
+                      <button
+                        onClick={() => setShowAllTermine(v => !v)}
+                        className="text-xs font-semibold text-[#B99B5F] hover:underline"
+                      >
+                        {showAllTermine
+                          ? "Weniger anzeigen"
+                          : `Alle anzeigen (${activeAppointments.length})`}
                       </button>
                     </div>
                   )}
@@ -1154,7 +1176,7 @@ await fetchAppointments(userId);
               </div>
 
               {/* Neue Buchung — Inline Form */}
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
+              <div id="neue-buchung" className="bg-white rounded-2xl border border-gray-100 shadow-sm scroll-mt-20">
                 <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
                   <div className="w-7 h-7 rounded-lg bg-[#B99B5F]/10 flex items-center justify-center">
                     <Clock className="w-4 h-4 text-[#B99B5F]" />
@@ -1591,9 +1613,9 @@ await fetchAppointments(userId);
                   <h3 className="text-sm font-bold text-gray-900">Meine Betreuungsperson</h3>
                 </div>
                 <div className="p-6">
-                  {clientDetails?.assignments?.filter(a => a.status === "active").length > 0 ? (
+                  {clientDetails?.assignments?.filter(a => a.status === "active" && a.confirmationStatus === "confirmed").length > 0 ? (
                     <div className="space-y-4">
-                      {clientDetails.assignments.filter(a => a.status === "active").map((assignment) => {
+                      {clientDetails.assignments.filter(a => a.status === "active" && a.confirmationStatus === "confirmed").map((assignment) => {
                         const emp = assignment.employee;
                         if (!emp) return null;
                         const alreadyRated = submittedRatings.includes(emp.id);
@@ -1647,56 +1669,8 @@ await fetchAppointments(userId);
               </div>
             </div>
 
-            {/* ── VOUCHER SECTION ── */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-purple-50 flex items-center justify-center">
-                  <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                  </svg>
-                </div>
-                <h3 className="text-sm font-bold text-gray-900">Gutschein einlösen</h3>
-              </div>
-              <div className="p-6">
-                <div className="flex gap-3 max-w-md">
-                  <input
-                    type="text"
-                    value={voucherCode}
-                    onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
-                    onKeyDown={(e) => e.key === "Enter" && handleVoucherSubmit()}
-                    placeholder="GUTSCHEIN-CODE"
-                    className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-mono uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-400 transition"
-                  />
-                  <button
-                    onClick={handleVoucherSubmit}
-                    disabled={voucherLoading || !voucherCode.trim()}
-                    className="px-5 py-2.5 bg-purple-600 text-white text-sm font-bold rounded-xl hover:bg-purple-700 transition disabled:opacity-40"
-                  >
-                    {voucherLoading ? "…" : "Einlösen"}
-                  </button>
-                </div>
-
-                {voucherResult && (
-                  <div className={`mt-4 flex items-start gap-3 p-4 rounded-xl border ${voucherResult.success ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"}`}>
-                    <span className="text-lg">{voucherResult.success ? "✅" : "❌"}</span>
-                    <div>
-                      {voucherResult.success ? (
-                        <>
-                          <p className="text-sm font-bold text-green-700">Gutschein erfolgreich eingelöst!</p>
-                          <p className="text-sm text-green-600 mt-0.5">
-                            Rabatt: <strong>{voucherResult.discountType === "percentage" ? `${voucherResult.discountValue}%` : `CHF ${voucherResult.discountValue}`}</strong>
-                          </p>
-                        </>
-                      ) : (
-                        <p className="text-sm font-bold text-red-600">{voucherResult.error || "Ungültiger Gutschein"}</p>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                <p className="text-xs text-gray-400 mt-3">Gutschein-Codes sind case-insensitiv und werden automatisch in Großbuchstaben umgewandelt.</p>
-              </div>
-            </div>
+            {/* F-30: Gutschein einlösen wurde nach /dashboard/finanzen verschoben,
+                damit die UI nicht doppelt existiert. */}
 
           </div>
         </main>
@@ -1755,14 +1729,27 @@ await fetchAppointments(userId);
                       </p>
                     </div>
                   )}
-                  {(selectedAppointment.subServiceName || clientDetails?.subServices?.length > 0) && (
-                    <div className="bg-gray-50 rounded-xl p-3 text-sm">
-                      <p className="text-xs text-gray-400 mb-1 font-medium">Dienstleistung Unterkategorie</p>
-                      <p className="font-bold text-gray-900">
-                        {selectedAppointment.subServiceName || clientDetails?.subServices?.map(s => s.name).join(", ") || "—"}
-                      </p>
-                    </div>
-                  )}
+                  {(selectedAppointment.subServiceName || clientDetails?.subServices?.length > 0) && (() => {
+                    const subs = selectedAppointment.subServiceName
+                      ? selectedAppointment.subServiceName.split(",").map(s => s.trim()).filter(Boolean)
+                      : (clientDetails?.subServices || []).map(s => s.name);
+                    return (
+                      <div className="bg-gray-50 rounded-xl p-3 text-sm">
+                        <p className="text-xs text-gray-400 mb-1 font-medium">Zusatzleistungen</p>
+                        {subs.length > 0 ? (
+                          <div className="flex flex-wrap gap-1.5 mt-1">
+                            {subs.map((sub, idx) => (
+                              <span key={idx} className="text-xs bg-white border border-[#B99B5F]/30 text-[#8a7040] px-2 py-0.5 rounded-full font-medium">
+                                {sub}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="font-bold text-gray-900">—</p>
+                        )}
+                      </div>
+                    );
+                  })()}
                   {selectedAppointment.status === "active" && (
                     <button
                       onClick={() => setIsEditing(true)}
@@ -1825,9 +1812,10 @@ await fetchAppointments(userId);
 
       {/* ── CANCEL CONFIRMATION MODAL ── */}
       {cancelConfirm && (() => {
-        const refund = getRefundInfo(cancelConfirm.date);
+        const fee = getCancellationFeeInfo(cancelConfirm.date);
         const amount = userData?.frequency === "einmalig" && userData?.totalPayment ? userData.totalPayment : (cancelConfirm.hours || 0) * 59;
-        const refundAmount = (amount * refund.pct) / 100;
+        const feeAmount = (amount * fee.pct) / 100;
+        const refundAmount = amount - feeAmount;
         return (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-50 p-4">
             <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 space-y-5">
@@ -1843,17 +1831,13 @@ await fetchAppointments(userId);
                 </div>
               </div>
 
-              <div className={`p-4 rounded-xl border ${refund.pct === 100 ? "bg-green-50 border-green-200" : refund.pct === 50 ? "bg-amber-50 border-amber-200" : "bg-red-50 border-red-200"}`}>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Rückerstattung</p>
-                <p className={`text-lg font-extrabold ${refund.color}`}>{refund.label}</p>
+              <div className={`p-4 rounded-xl border ${fee.pct === 0 ? "bg-green-50 border-green-200" : fee.pct === 50 ? "bg-amber-50 border-amber-200" : "bg-red-50 border-red-200"}`}>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Stornogebühr</p>
+                <p className={`text-lg font-extrabold ${fee.color}`}>{fee.label}</p>
                 <p className="text-sm text-gray-600 mt-1">
-                  CHF <strong>{refundAmount.toFixed(2)}</strong> von CHF {amount.toFixed(2)}
+                  Gebühr: CHF <strong>{feeAmount.toFixed(2)}</strong> · Rückerstattung: CHF <strong>{refundAmount.toFixed(2)}</strong> von CHF {amount.toFixed(2)}
                 </p>
-                <p className="text-xs text-gray-400 mt-2">
-                  {refund.pct === 100 ? "Mehr als 14 Tage Vorlauf → volle Rückerstattung"
-                    : refund.pct === 50 ? "7–14 Tage Vorlauf → 50% Rückerstattung"
-                    : "Weniger als 7 Tage Vorlauf → keine Rückerstattung"}
-                </p>
+                <p className="text-xs text-gray-400 mt-2">{fee.note}</p>
               </div>
 
               <div className="flex gap-3">

@@ -10,8 +10,16 @@ export default async function handler(req, res) {
     weekEnd.setDate(weekEnd.getDate() + 7);
 
     // 1. Neue Buchungen — recent clients without full assignment
+    //    Terminated/cancelled clients are kept in the database (soft-delete) for
+    //    history, but must not show up in the "new bookings" list.
     const neueBuchungen = await prisma.user.findMany({
-      where: { role: "client" },
+      where: {
+        role: "client",
+        OR: [
+          { status: null },
+          { status: { notIn: ["gekuendigt", "canceled", "cancelled"] } },
+        ],
+      },
       orderBy: { createdAt: "desc" },
       take: 20,
       select: {

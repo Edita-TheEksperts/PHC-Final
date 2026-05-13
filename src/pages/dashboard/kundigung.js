@@ -14,8 +14,20 @@ export default function KundigungPage() {
   const [isOpen, setIsOpen] = useState(false);
   const [userData, setUserData] = useState(null);
   const [confirmTermination, setConfirmTermination] = useState(false);
+  const [acknowledgedFee, setAcknowledgedFee] = useState(false);
   const [terminationReason, setTerminationReason] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [terminationError, setTerminationError] = useState("");
+
+  // F-24 fee: CHF 300 Aufwandsentschädigung wenn innerhalb 30 Tagen ab
+  // Vertragsbeginn gekündigt wird.
+  const EARLY_TERMINATION_DAYS = 30;
+  const EARLY_TERMINATION_FEE_CHF = 300;
+  const contractStart = userData?.firstDate || userData?.createdAt;
+  const daysSinceStart = contractStart
+    ? Math.floor((Date.now() - new Date(contractStart).getTime()) / (1000 * 60 * 60 * 24))
+    : Infinity;
+  const feeApplies = daysSinceStart < EARLY_TERMINATION_DAYS;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -29,25 +41,40 @@ export default function KundigungPage() {
 
   const handleTerminate = async () => {
     if (!confirmTermination || !terminationReason) return;
+    if (feeApplies && !acknowledgedFee) {
+      setTerminationError("Bitte bestätigen Sie die Aufwandsentschädigung von CHF 300.");
+      return;
+    }
+    setTerminationError("");
     setIsSubmitting(true);
     try {
       const token = localStorage.getItem("userToken");
-      await fetch("/api/terminate-contract", {
+      const res = await fetch("/api/terminate-contract", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ reason: terminationReason }),
+        body: JSON.stringify({ reason: terminationReason, acknowledgedFee: feeApplies ? acknowledgedFee : undefined }),
       });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setTerminationError(data?.message || "Kündigung fehlgeschlagen. Bitte versuchen Sie es erneut.");
+        return;
+      }
+      if (data?.feeApplies && data?.chargeStatus === "failed") {
+        // Termination went through but the charge failed — surface this so the
+        // user knows we'll follow up. Still log them out.
+        alert(`Vertrag gekündigt. Die Aufwandsentschädigung von CHF ${data.feeChf} konnte nicht automatisch eingezogen werden — wir kontaktieren Sie zur Begleichung.`);
+      }
       localStorage.removeItem("userToken");
       router.replace("/login");
     } catch {
-      alert("❌ Fehler bei der Kündigung. Bitte versuchen Sie es erneut.");
+      setTerminationError("Fehler bei der Kündigung. Bitte versuchen Sie es erneut.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const userInitials = `${userData?.firstName?.[0] || ""}${userData?.lastName?.[0] || ""}`.toUpperCase() || "?";
-  const canSubmit = confirmTermination && terminationReason.trim().length > 0;
+  const canSubmit = confirmTermination && terminationReason.trim().length > 0 && (!feeApplies || acknowledgedFee);
 
   return (
     <div className="flex min-h-screen bg-gray-50 font-sans">
@@ -158,10 +185,25 @@ export default function KundigungPage() {
             <div>
               <p className="text-sm font-bold text-red-700 mb-1">Wichtige Information</p>
               <p className="text-sm text-red-600">
-                Bei Kündigung wird Ihr Profil dauerhaft gelöscht. Sie verlieren den Zugriff auf Ihr Konto sowie alle Services und gebuchten Termine.
+                Bei Kündigung verlieren Sie den Zugriff auf Ihr Konto sowie alle Services und gebuchten Termine. Ihr Profil bleibt zu Archivierungszwecken bestehen.
               </p>
             </div>
           </div>
+
+          {/* F-24: Early-termination fee banner */}
+          {feeApplies && (
+            <div className="flex items-start gap-3 bg-amber-50 border border-amber-300 rounded-2xl p-5 mb-6">
+              <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-bold text-amber-800 mb-1">
+                  Aufwandsentschädigung CHF {EARLY_TERMINATION_FEE_CHF}
+                </p>
+                <p className="text-sm text-amber-800">
+                  Ihr Vertrag wurde vor {daysSinceStart} {daysSinceStart === 1 ? "Tag" : "Tagen"} gestartet. Da die Kündigung innerhalb der ersten {EARLY_TERMINATION_DAYS} Tage erfolgt, wird eine Aufwandsentschädigung von <strong>CHF {EARLY_TERMINATION_FEE_CHF}</strong> über die hinterlegte Zahlungsmethode belastet.
+                </p>
+              </div>
+            </div>
+          )}
 
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-6">
 
@@ -185,6 +227,29 @@ export default function KundigungPage() {
               <p className="text-xs text-gray-400 mt-1">{terminationReason.length} Zeichen</p>
             </div>
 
+            {/* F-24: Fee acknowledgement (only when within 30-day window) */}
+            {feeApplies && (
+              <label className="flex items-start gap-3 cursor-pointer group">
+                <div className={`mt-0.5 w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition
+                  ${acknowledgedFee ? "bg-amber-600 border-amber-600" : "border-amber-400 group-hover:border-amber-600"}`}>
+                  {acknowledgedFee && (
+                    <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </div>
+                <input
+                  type="checkbox"
+                  checked={acknowledgedFee}
+                  onChange={(e) => setAcknowledgedFee(e.target.checked)}
+                  className="sr-only"
+                />
+                <span className="text-sm text-amber-900">
+                  Ich akzeptiere die Belastung von <strong>CHF {EARLY_TERMINATION_FEE_CHF}.–</strong> über meine hinterlegte Zahlungsmethode.
+                </span>
+              </label>
+            )}
+
             {/* Confirm checkbox */}
             <label className="flex items-start gap-3 cursor-pointer group">
               <div className={`mt-0.5 w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition
@@ -205,6 +270,12 @@ export default function KundigungPage() {
                 Ja, ich bestätige, dass ich den Vertrag <strong>endgültig kündigen</strong> möchte und alle Daten werden unwiderruflich gelöscht.
               </span>
             </label>
+
+            {terminationError && (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700">
+                {terminationError}
+              </div>
+            )}
 
             {/* Submit */}
             <button

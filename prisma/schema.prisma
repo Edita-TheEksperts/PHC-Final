@@ -184,6 +184,16 @@ model User {
   otherLanguage           String?
   anrede                  String?
   kanton                  String?
+  houseNumber             String?
+  requestStreet           String?
+  requestHouseNumber      String?
+  requestPostalCode       String?
+  requestCity             String?
+  requestKanton           String?
+  // F-25: kept after soft-delete (status="gekuendigt") so the admin
+  // "Ehemalige Kunden" view can show why and when a contract ended.
+  terminationReason       String?
+  terminationDate         DateTime?
   activityLogs            ActivityLog[] @relation("UserActivityLogs")
   assignments             Assignment[]
   internalNotes           InternalNote[] @relation("UserNotes")
@@ -315,7 +325,7 @@ model Employee {
   weekendReady         String?
   worksWithAnimals     String?
   zipCode              String?
-  desiredWeeklyHours   String?
+  desiredWeeklyHours   String[]
   certificateFile      String?
   cvFile               String?
   drivingLicenceFile   String?

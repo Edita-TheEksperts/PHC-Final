@@ -1,5 +1,6 @@
 import { prisma } from "../../lib/prisma.js";
 import { sendEmail } from "../../lib/emails.js";
+import { recipientEmail } from "../../lib/recipientEmail.js";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -36,9 +37,10 @@ export default async function handler(req, res) {
     });
 
     // 👉 send email to client if user exists
-    if (updated?.user?.email) {
+    const clientTo = recipientEmail(updated?.user);
+    if (clientTo) {
       await sendEmail({
-        to: updated.user.email,
+        to: clientTo,
         subject: "⏰ Update zu Ihrem Einsatzplan",
         html: `
           <p>Guten Tag ${updated.user.firstName} ${updated.user.lastName},</p>

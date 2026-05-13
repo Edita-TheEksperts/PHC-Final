@@ -18,6 +18,29 @@ export default function FinanzenPage() {
   const [cardLoading, setCardLoading] = useState(false);
   const [userData, setUserData] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState(null);
+  const [voucherCode, setVoucherCode] = useState("");
+  const [voucherResult, setVoucherResult] = useState(null);
+  const [voucherLoading, setVoucherLoading] = useState(false);
+
+  const handleVoucherSubmit = async () => {
+    if (!voucherCode.trim()) return;
+    setVoucherLoading(true);
+    setVoucherResult(null);
+    try {
+      const res = await fetch("/api/vouchers/use", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: voucherCode.trim(), userId: userData?.id }),
+      });
+      const data = await res.json();
+      setVoucherResult(data);
+      if (data?.success) setVoucherCode("");
+    } catch (err) {
+      setVoucherResult({ success: false, error: "Netzwerkfehler" });
+    } finally {
+      setVoucherLoading(false);
+    }
+  };
 
   const stripe = useStripe();
   const elements = useElements();
@@ -259,6 +282,51 @@ export default function FinanzenPage() {
               </button>
             </div>
           </div>
+
+          {/* ── GUTSCHEIN SECTION ── */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mt-6">
+            <div className="px-6 py-4 border-b border-gray-100">
+              <h3 className="text-sm font-bold text-gray-900">Gutschein einlösen</h3>
+              <p className="text-xs text-gray-500 mt-0.5">Ein gespeicherter Gutschein wird bei Ihrer nächsten Buchung automatisch angewendet.</p>
+            </div>
+            <div className="p-6">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={voucherCode}
+                  onChange={(e) => setVoucherCode(e.target.value)}
+                  placeholder="Gutscheincode"
+                  className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#B99B5F]/30"
+                />
+                <button
+                  onClick={handleVoucherSubmit}
+                  disabled={voucherLoading || !voucherCode.trim()}
+                  className="px-5 py-2.5 bg-[#B99B5F] text-white text-sm font-semibold rounded-xl hover:bg-[#a78a50] disabled:opacity-50 transition"
+                >
+                  {voucherLoading ? "…" : "Einlösen"}
+                </button>
+              </div>
+              {voucherResult && (
+                <div className={`mt-4 flex items-start gap-3 p-4 rounded-xl border ${voucherResult.success ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"}`}>
+                  <span className="text-lg">{voucherResult.success ? "✅" : "❌"}</span>
+                  <div className="text-sm">
+                    {voucherResult.success ? (
+                      <>
+                        <p className="font-bold text-green-700">Gutschein erfolgreich eingelöst!</p>
+                        <p className="text-green-700">
+                          Rabatt: <strong>{voucherResult.discountType === "percentage" || voucherResult.discountType === "percent" ? `${voucherResult.discountValue}%` : `CHF ${voucherResult.discountValue}`}</strong>
+                        </p>
+                      </>
+                    ) : (
+                      <p className="font-bold text-red-600">{voucherResult.error || "Ungültiger Gutschein"}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+              <p className="text-xs text-gray-400 mt-3">Codes werden automatisch in Grossbuchstaben umgewandelt.</p>
+            </div>
+          </div>
+
           </div>
         </div>
       </main>

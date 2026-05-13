@@ -4,6 +4,26 @@ import { useRouter } from "next/router"
 import { Menu, X, User } from "lucide-react"
 import Input from "./Input"
 
+// F-04: merge several CSV-like fields into one deduplicated comma list.
+// Empty/whitespace tokens drop out; identical tokens (case-insensitive) collapse.
+function dedupeCsv(values) {
+  const seen = new Set();
+  const out = [];
+  for (const v of values || []) {
+    if (!v) continue;
+    const parts = Array.isArray(v) ? v : String(v).split(/[,;]/);
+    for (const raw of parts) {
+      const token = String(raw).trim();
+      if (!token) continue;
+      const key = token.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(token);
+    }
+  }
+  return out.join(", ");
+}
+
 const navItems = [
   { label: "Dashboard", path: "/client-dashboard", icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" },
   { label: "Persönliche Informationen", path: "/dashboard/formular", icon: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" },
@@ -221,7 +241,9 @@ export default function FormularPage() {
                 {
                   title: "Adresse", icon: "M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z",
                   fields: [
-                    ["Strasse", form.careStreet], ["PLZ", form.carePostalCode], ["Stadt", form.careCity],
+                    ["Strasse", form.careStreet], ["Hausnummer", form.houseNumber],
+                    ["PLZ", form.carePostalCode], ["Stadt", form.careCity],
+                    ["Kanton", form.kanton],
                     ["Telefon", form.carePhone], ["Parkplatz", form.careHasParking], ["Eingang", form.careEntrance],
                     ["Eingang Details", form.careEntranceDetails], ["Briefkasten Schlüsselort", form.mailboxKeyLocation],
                     ["Briefkasten Details", form.mailboxDetails],
@@ -235,17 +257,46 @@ export default function FormularPage() {
                   ]
                 },
                 {
+                  title: "Betreute Person", icon: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z",
+                  fields: [
+                    ["Vorname", form.careFirstName], ["Nachname", form.careLastName],
+                  ]
+                },
+                {
                   title: "Gesundheit & Mobilität", icon: "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z",
                   fields: [
                     ["Größe (cm)", form.height], ["Gewicht (kg)", form.weight],
                     ["Körperlicher Zustand", form.physicalState], ["Mobilität", form.mobility],
-                    ["Hilfsmittel", form.mobilityAids], ["Pflegehilfsmittel", form.toolsAvailable],
-                    ["Andere Hilfsmittel", form.toolsOther], ["Aids", form.aids], ["Aids Sonstige", form.aidsOther],
+                    // F-04: aids/mobilityAids/toolsAvailable used to be shown as 5 separate
+                    // rows ("Hilfsmittel", "Pflegehilfsmittel", "Aids", "Andere Hilfsmittel",
+                    // "Aids Sonstige") — they overlap in practice. Merge into 2 deduped rows.
+                    ["Hilfsmittel", dedupeCsv([form.mobilityAids, form.toolsAvailable, form.aids])],
+                    ["Sonstige Hilfsmittel", dedupeCsv([form.toolsOther, form.aidsOther])],
                     ["Inkontinenz", form.incontinence], ["Inkontinenz Typen", form.incontinenceTypes],
-                    ["Ernährungsunterstützung", form.foodSupport], ["Typen", form.foodSupportTypes],
+                    ["Ernährungsunterstützung", form.foodSupport], ["Ernährung Typen", form.foodSupportTypes],
                     ["Medizinische Hinweise", form.medicalFindings], ["Gesundheitliche Hinweise", form.healthFindings],
-                    ["Allergien?", form.hasAllergies], ["Allergie Details", form.allergyDetails],
-                    ["Mentale Diagnosen", form.mentalDiagnoses], ["Verhalten", form.behaviorTraits],
+                    ["Allergien?", form.hasAllergies], ["Allergien (welche)", form.allergyWhich],
+                    ["Allergie Details", form.allergyDetails],
+                    ["Mentale Diagnosen", form.mentalDiagnoses], ["Mentale Unterstützung nötig?", form.mentalSupportNeeded],
+                    ["Mentale Begleitung", form.mentalSupport], ["Verhalten", form.behaviorTraits],
+                  ]
+                },
+                {
+                  title: "Kommunikation", icon: "M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z",
+                  fields: [
+                    ["Sehen", form.communicationSehen || form.communicationVision],
+                    ["Hören", form.communicationHören || form.communicationHearing],
+                    ["Sprechen", form.communicationSprechen || form.communicationSpeech],
+                  ]
+                },
+                {
+                  title: "Grundpflege & Gesundheitsförderung", icon: "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z",
+                  fields: [
+                    ["Grundpflege", form.basicCare], ["Grundpflege Bedarf", form.basicCareNeeds],
+                    ["Grundpflege Sonstiges", form.basicCareOther || form.basicCareOtherField],
+                    ["Gesundheitsaktivitäten", form.healthActivities], ["Aktivitäten Sonstiges", form.healthActivitiesOther],
+                    ["Gesundheitsförderung", form.healthPromotions], ["Förderung Sonstiges", form.healthPromotionOther],
+                    ["Technische Hilfsmittel?", form.hasTech], ["Vorhandene Technik", form.techAvailable],
                   ]
                 },
                 {
@@ -256,7 +307,9 @@ export default function FormularPage() {
                     ["Einkaufen mit Klient", form.shoppingWithClient], ["Einkaufsartikel", form.shoppingItems],
                     ["Gemeinsames Kochen", form.jointCooking], ["Kochen", form.cooking],
                     ["Begleitung", form.companionship], ["Beruflicher Werdegang", form.biographyWork],
-                    ["Lesen", form.reading], ["Kartenspiele", form.cardGames], ["Ausflüge", form.trips],
+                    ["Lesen", form.reading || form.reads], ["Kartenspiele", form.cardGames || form.playsCards],
+                    ["Ausflüge", form.trips || form.outings],
+                    ["Bedingungen bei Ankunft", form.careArrivalConditions],
                   ]
                 },
                 {
@@ -312,8 +365,10 @@ export default function FormularPage() {
                 <Input label="Sprachen" name="languages" value={form.languages} onChange={handleChange} />
                 <Input label="Andere Sprache" name="otherLanguage" value={form.otherLanguage} onChange={handleChange} />
                 <Input label="Strasse" name="careStreet" value={form.careStreet} onChange={handleChange} />
+                <Input label="Hausnummer" name="houseNumber" value={form.houseNumber} onChange={handleChange} />
                 <Input label="PLZ" name="carePostalCode" value={form.carePostalCode} onChange={handleChange} />
                 <Input label="Stadt" name="careCity" value={form.careCity} onChange={handleChange} />
+                <Input label="Kanton" name="kanton" value={form.kanton} onChange={handleChange} />
                 <Input label="Telefon" name="carePhone" value={form.carePhone} onChange={handleChange} />
                 <Input label="Parkplatz vorhanden?" name="careHasParking" value={form.careHasParking} onChange={handleChange} yesNo={true} />
                 <Input label="Eingang" name="careEntrance" value={form.careEntrance} onChange={handleChange} />
@@ -328,11 +383,11 @@ export default function FormularPage() {
                 <Input label="Gewicht (kg)" name="weight" value={form.weight} onChange={handleChange} />
                 <Input label="Körperlicher Zustand" name="physicalState" value={form.physicalState} onChange={handleChange} />
                 <Input label="Mobilität" name="mobility" value={form.mobility} onChange={handleChange} />
+                {/* F-04: collapsed from 5 overlapping fields (mobilityAids/toolsAvailable/toolsOther/aids/aidsOther)
+                    into the two canonical ones the view-side dedupes into. Legacy values stay in the DB and
+                    keep rendering in view mode via dedupeCsv. */}
                 <Input label="Hilfsmittel" name="mobilityAids" value={form.mobilityAids} onChange={handleChange} />
-                <Input label="Pflegehilfsmittel" name="toolsAvailable" value={form.toolsAvailable} onChange={handleChange} />
-                <Input label="Andere Pflegehilfsmittel" name="toolsOther" value={form.toolsOther} onChange={handleChange} />
-                <Input label="Hilfsmittel (aids)" name="aids" value={form.aids} onChange={handleChange} />
-                <Input label="Andere Hilfsmittel (aidsOther)" name="aidsOther" value={form.aidsOther} onChange={handleChange} />
+                <Input label="Sonstige Hilfsmittel" name="aidsOther" value={form.aidsOther} onChange={handleChange} />
                 <Input label="Inkontinenz" name="incontinence" value={form.incontinence} onChange={handleChange} />
                 <Input label="Inkontinenz Typen" name="incontinenceTypes" value={form.incontinenceTypes} onChange={handleChange} />
                 <Input label="Ernährungsunterstützung" name="foodSupport" value={form.foodSupport} onChange={handleChange} />

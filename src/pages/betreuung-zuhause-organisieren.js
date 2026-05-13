@@ -55,7 +55,7 @@ Die Prime Home Care organisiert stundenweise Unterstützung sowie Betreuung und 
 
 <p className="text-[#003588] text-[24px] font-normal leading-[32px] font-['Metropolis'] mt-[16px]">
 Sie haben das Gefühl, nicht alle Fakten zu kennen und sollen <br></br>weitreichende und kostspielige Entscheidungen erst noch unter<br></br> Zeitdruck treffen?<br></br>
-Registrieren Sie sich und erstellen Sie ihre eigene Offerte direkt<br></br> und einfach
+Buchen Sie online und erstellen Sie Ihre eigene Offerte direkt<br></br> und einfach
 </p>
 <Link href="/register-client">
 

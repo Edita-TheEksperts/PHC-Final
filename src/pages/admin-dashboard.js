@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import AdminLayout from "../components/AdminLayout";
+import { authFetch, clearAuthStorage, isTokenExpired } from "../lib/clientAuth";
+import { EMPLOYEE_STATUS, ASSIGNMENT_STATUS } from "../lib/statusLabels";
 
 function DashboardSection({ title, count, children, defaultOpen = true }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -68,7 +70,8 @@ export default function DashboardPage() {
     if (typeof window === "undefined") return;
     const token = localStorage.getItem("userToken");
     const role = localStorage.getItem("userRole");
-    if (!token || role !== "admin") {
+    if (!token || role !== "admin" || isTokenExpired(token)) {
+      clearAuthStorage();
       router.replace("/login");
       return;
     }
@@ -79,7 +82,7 @@ export default function DashboardPage() {
 
   async function fetchDueTasks() {
     try {
-      const res = await fetch("/api/admin/due-tasks");
+      const res = await authFetch("/api/admin/due-tasks");
       const json = await res.json();
       setDueTasks(json.tasks || []);
     } catch {
@@ -89,7 +92,7 @@ export default function DashboardPage() {
 
   async function fetchUnreadMessages() {
     try {
-      const res = await fetch("/api/admin/unread-messages");
+      const res = await authFetch("/api/admin/unread-messages");
       const json = await res.json();
       setUnreadMessages(json.messages || []);
     } catch {
@@ -99,7 +102,7 @@ export default function DashboardPage() {
 
   async function markMessageRead(id) {
     try {
-      await fetch("/api/admin/notes", {
+      await authFetch("/api/admin/notes", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, readByAdmin: true }),
@@ -110,7 +113,7 @@ export default function DashboardPage() {
 
   async function fetchDashboard() {
     try {
-      const res = await fetch("/api/admin/dashboard-overview");
+      const res = await authFetch("/api/admin/dashboard-overview");
       const json = await res.json();
       // Even on error, API returns fallback data
       setData(json);
@@ -181,19 +184,9 @@ export default function DashboardPage() {
     return days >= parseInt(filter.bewerbungenDays);
   });
 
-  const assignmentStatusMap = {
-    pending: { label: "Offen", color: "bg-amber-50 text-amber-700 border-amber-200" },
-    active: { label: "Aktiv", color: "bg-blue-50 text-blue-700 border-blue-200" },
-    completed: { label: "Abgeschlossen", color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-    rejected: { label: "Abgelehnt", color: "bg-red-50 text-red-700 border-red-200" },
-  };
-
-  const empStatusMap = {
-    pending: { label: "Neu", color: "bg-amber-50 text-amber-700 border-amber-200" },
-    invited: { label: "Eingeladen", color: "bg-blue-50 text-blue-700 border-blue-200" },
-    approved: { label: "Genehmigt", color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-    rejected: { label: "Abgelehnt", color: "bg-red-50 text-red-700 border-red-200" },
-  };
+  // F-37: status maps come from src/lib/statusLabels.js — central German labels.
+  const assignmentStatusMap = ASSIGNMENT_STATUS;
+  const empStatusMap = EMPLOYEE_STATUS;
 
   return (
     <AdminLayout>

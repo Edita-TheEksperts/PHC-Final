@@ -89,8 +89,10 @@ const ALLOWED_FIELDS = [
 
   // Address / Care
   "careStreet",
+  "houseNumber",
   "carePostalCode",
   "careCity",
+  "kanton",
   "careFirstName",
   "careLastName",
   "carePhone",

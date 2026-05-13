@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { sendApplicantConfirmationEmail } from "../../lib/mailer";
 
 const prisma = new PrismaClient();
 
@@ -11,6 +12,22 @@ export default async function handler(req, res) {
 
     if (!data.firstName || !data.lastName || !data.email) {
       return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    // Diagnostic: surface whether the registration form actually sent the
+    // skill arrays. F-34 reported these as "missing" — every fresh registration
+    // since this log was added should show the array sizes in Vercel logs, so
+    // we can tell if the symptom is data-related (legacy rows) or wire-related.
+    if (process.env.NODE_ENV !== "test") {
+      console.log("[employee-register] skills received:", {
+        email: data.email,
+        languages: Array.isArray(data.languages) ? data.languages.length : "non-array",
+        languageOther: data.languageOther ? "set" : "empty",
+        communicationTraits: Array.isArray(data.communicationTraits) ? data.communicationTraits.length : "non-array",
+        dietaryExperience: Array.isArray(data.dietaryExperience) ? data.dietaryExperience.length : "non-array",
+        specialTrainings: Array.isArray(data.specialTrainings) ? data.specialTrainings.length : "non-array",
+        desiredWeeklyHours: Array.isArray(data.desiredWeeklyHours) ? data.desiredWeeklyHours.length : (data.desiredWeeklyHours ? 1 : 0),
+      });
     }
 
     const existingEmployee = await prisma.employee.findUnique({
@@ -76,7 +93,11 @@ await prisma.employee.create({
     travelSupport: data.travelSupport || null,
     bodyCareSupport: data.bodyCareSupport || null,
     worksWithAnimals: data.worksWithAnimals || null,
-    desiredWeeklyHours: data.desiredWeeklyHours || null,
+    desiredWeeklyHours: Array.isArray(data.desiredWeeklyHours)
+      ? data.desiredWeeklyHours
+      : data.desiredWeeklyHours
+        ? [data.desiredWeeklyHours]
+        : [],
     howFarCanYouTravel: data.howFarCanYouTravel || null,
 
     // === AVAILABILITY ===
@@ -116,6 +137,20 @@ profilePhoto: normalizeFile(data.profilePhoto),
   },
 });
 
+
+    // F-06: confirm receipt of the application. The earlier flow only
+    // returned 201 and the candidate never heard back until manual
+    // outreach — Bettina/Silvain reported this as "E-Mail kommt nicht".
+    // Fire-and-forget so a transient SMTP issue doesn't fail the
+    // registration itself; the function logs its own errors.
+    sendApplicantConfirmationEmail({
+      email: data.email,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      salutation: data.salutation,
+    }).catch((err) =>
+      console.error("[employee-register] applicant confirmation failed:", err)
+    );
 
     return res.status(201).json({
       message: "Employee registered successfully. Waiting for admin approval.",

@@ -541,7 +541,7 @@ const requiresAllergyInfo = Array.isArray(form.subServices)
     weight: form.weight ? String(form.weight) : "",
     physicalState: form.physicalState || "",
     mobility: form.mobility || "",
-    mobilityAids: arrJoin(form.mobilityAids),
+    mobilityAids: arrJoin((form.careTools || []).filter((t) => ["Rollstuhl", "Rollator", "Gehstock"].includes(t))),
     toolsAvailable: arrJoin(form.careTools),
     toolsOther: form.careToolsOther || "",
     incontinence: arrJoin(form.incontinence),
@@ -1154,8 +1154,8 @@ languages: Array.isArray(form.languages)
 
     // Mobility & Household (ints)
     mobility: form.mobility || "",
-mobilityAids: Array.isArray(form.mobilityAids)
-  ? form.mobilityAids.join(", ")
+mobilityAids: Array.isArray(form.careTools)
+  ? form.careTools.filter((t) => ["Rollstuhl", "Rollator", "Gehstock"].includes(t)).join(", ")
   : "",
     householdRooms:
       form.householdRooms === "" || form.householdRooms === undefined
@@ -1246,7 +1246,7 @@ if (data.userId) {
 
   const handleOptionalSubmit = async () => {
     if (!userId) {
-      alert("❌ userId fehlt – Registrierung nicht abgeschlossen");
+      alert("❌ userId fehlt – Buchung nicht abgeschlossen");
       return;
     }
 
@@ -1983,9 +1983,22 @@ onChange={(date) => {
   const formatted = format(date, "dd.MM.yyyy", { locale: de });
   const weekday = format(date, "EEEE", { locale: de });
 
-  const updatedSchedules = [...form.schedules];
+  // F-09: previously this always assigned schedules[0].day = weekday, which
+  // silently overwrote a user's existing choice. If the user had set
+  // schedules = [Mo, Mi, Fr] and then picked a Wednesday start date, the
+  // first row was forced to Mittwoch — producing two Mi series and the
+  // "all appointments on the same day" symptom Bettina/Silvain reported.
+  // Now we only seed the first row's day when nothing else has been set,
+  // and we never overwrite a weekday that is already used elsewhere.
+  const updatedSchedules = form.schedules.map((s) => ({ ...s }));
   if (updatedSchedules.length > 0) {
-    updatedSchedules[0].day = weekday;
+    const otherDaysUsed = new Set(
+      updatedSchedules.slice(1).map((s) => s.day).filter(Boolean)
+    );
+    const firstRowEmpty = !updatedSchedules[0].day;
+    if (firstRowEmpty && !otherDaysUsed.has(weekday)) {
+      updatedSchedules[0].day = weekday;
+    }
   }
 
   setForm({
@@ -2045,12 +2058,24 @@ onChange={(date) => {
           if (isEinmalig || isMonatlich) return;
           setForm((prev) => {
             const baseSubServices = prev.schedules[0]?.subServices || [];
+            // Default the new row's weekday to the next free one so users can't
+            // accidentally submit empty days — that bug produced "every appointment
+            // on the same weekday" because generateScheduleDates skips empty rows.
+            const weekOrder = ["Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag","Sonntag"];
+            const used = new Set(prev.schedules.map((s) => s.day).filter(Boolean));
+            const firstDay = prev.schedules[0]?.day;
+            const startIdx = firstDay ? weekOrder.indexOf(firstDay) + 1 : 0;
+            let nextDay = "";
+            for (let i = 0; i < weekOrder.length; i++) {
+              const candidate = weekOrder[(startIdx + i) % weekOrder.length];
+              if (!used.has(candidate)) { nextDay = candidate; break; }
+            }
             return {
               ...prev,
               schedules: [
                 ...prev.schedules,
                 {
-                  day: "",
+                  day: nextDay,
                   startTime: "08:00",
                   hours: 2,
                   subServices: [],
@@ -2084,7 +2109,6 @@ onChange={(date) => {
               setForm({ ...form, schedules: updated });
             }}
             className="border px-4 py-2 rounded-md"
-            disabled={i === 0 && Boolean(form.firstDate)}
           >
             <option value="">Wochentag wählen</option>
             {[
@@ -2255,11 +2279,17 @@ onChange={(date) => {
     updated[i].subServices = nextSubServices;
 
     // 2h minimum; each subservice beyond the first 2 adds 0.5h
-    const minHours = 2 + Math.max(0, nextSubServices.length - 2) * 0.5;
+    const oldMinHours = 2 + Math.max(0, currentList.length - 2) * 0.5;
+    const newMinHours = 2 + Math.max(0, nextSubServices.length - 2) * 0.5;
+    const currentHours = updated[i].hours ?? 2;
 
-    // Only raise hours to meet the new minimum; never decrease what the user set
-    if ((updated[i].hours ?? 2) < minHours) {
-      updated[i].hours = minHours;
+    // If the user is still on the auto-calculated minimum, follow it both
+    // ways. Once they've manually bumped hours above the auto minimum, leave
+    // their value alone — but never go below the new minimum.
+    if (currentHours <= oldMinHours) {
+      updated[i].hours = newMinHours;
+    } else if (currentHours < newMinHours) {
+      updated[i].hours = newMinHours;
     }
 
     setForm({ ...form, schedules: updated });
@@ -2927,6 +2957,64 @@ onChange={(date) => {
   <p className="text-red-500 text-sm mt-1">{errors.requestEmail}</p>
 )}
     </div>
+
+    {/* Address of the requesting person (Auftraggeber). Optional — leave blank
+        if identical with the cared-for person's address. */}
+    <div className="mb-2 md:col-span-2">
+      <p className="text-sm text-gray-500 mt-2 mb-1">
+        Adresse der anfragenden Person <span className="text-gray-400">(optional, falls abweichend)</span>
+      </p>
+    </div>
+    <div className="mb-2">
+      <label className="block font-medium mb-1">Strasse</label>
+      <input
+        name="requestStreet"
+        placeholder="Strasse"
+        value={form.requestStreet || ""}
+        onChange={handleChange}
+        className={inputClass}
+      />
+    </div>
+    <div className="mb-2">
+      <label className="block font-medium mb-1">Hausnummer</label>
+      <input
+        name="requestHouseNumber"
+        placeholder="Nr."
+        value={form.requestHouseNumber || ""}
+        onChange={handleChange}
+        className={inputClass}
+      />
+    </div>
+    <div className="mb-2">
+      <label className="block font-medium mb-1">PLZ</label>
+      <input
+        name="requestPostalCode"
+        placeholder="PLZ"
+        value={form.requestPostalCode || ""}
+        onChange={handleChange}
+        className={inputClass}
+      />
+    </div>
+    <div className="mb-2">
+      <label className="block font-medium mb-1">Stadt</label>
+      <input
+        name="requestCity"
+        placeholder="Stadt"
+        value={form.requestCity || ""}
+        onChange={handleChange}
+        className={inputClass}
+      />
+    </div>
+    <div className="mb-2">
+      <label className="block font-medium mb-1">Kanton</label>
+      <input
+        name="requestKanton"
+        placeholder="Kanton"
+        value={form.requestKanton || ""}
+        onChange={handleChange}
+        className={inputClass}
+      />
+    </div>
   </div>
 </div>
 
@@ -3370,26 +3458,6 @@ onChange={(date) => {
                     onChange={handleChange}
                     className={inputClass + " mb-6"}
                   />
-                  <h3 className="font-[600] text-[16px] mb-4">Mobilität</h3>
-                  <div className="mb-4">
-                    <p className="font-medium mb-2">Verfügbare Hilfsmittel</p>
-                    <div className="flex flex-wrap gap-6">
-                      {["Rollstuhl", "Rollator", "Gehstock"].map((aid) => (
-                        <label
-                          key={aid}
-                          className="inline-flex items-center gap-2 text-sm text-gray-800"
-                        >
-                          <input
-                            type="checkbox"
-                            className="w-5 h-5 accent-[#B99B5F] border border-gray-300 rounded"
-                            checked={form.mobilityAids?.includes(aid)}
-                            onChange={() => toggleCheckbox("mobilityAids", aid)}
-                          />
-                          <span>{aid}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
                   <h3 className="block  font-medium mb-1">Inkontinenz</h3>
                   <div className="mb-6 flex flex-wrap gap-6">
                     {["Urin", "Stuhl", "Dauerkatheter", "Stoma"].map((inc) => (
@@ -3870,7 +3938,7 @@ onChange={(date) => {
       </h1>
 
       <p className="text-gray-600 leading-relaxed mb-2">
-        Der Registrierungsprozess wurde erfolgreich abgeschlossen.
+        Ihre Buchung wurde erfolgreich abgeschlossen.
       </p>
 
       <p className="text-gray-600 leading-relaxed mb-8">

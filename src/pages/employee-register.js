@@ -10,6 +10,7 @@ import DateEmployee from "../components/DateEmployee.js"; // Adjust path if need
 import DatePicker, { registerLocale } from "react-datepicker";
 import { de } from "date-fns/locale";
 import "react-datepicker/dist/react-datepicker.css";
+import { SERVICE_CATALOG } from "../lib/serviceCatalog";
 
 // Component Start
 export default function RegisterEmployee() {
@@ -82,7 +83,7 @@ const scrollToTop = () => {
     bodyCareSupport: "",
     hasAllergies: "",
     worksWithAnimals: "",
-    desiredWeeklyHours: "",
+    desiredWeeklyHours: [],
     howFarCanYouTravel: "",
     availabilityFrom: typeof window !== "undefined" ? new Date().toISOString().split("T")[0] : "",
     availabilityDays: [],
@@ -98,43 +99,7 @@ const scrollToTop = () => {
   drivingLicenceFile: null,
   profilePhoto: null,
   });
-const services = {
-  "Alltagsbegleitung und Besorgungen": [
-    "Beleitung zu Terminen",
-    "Einkäufe erledigen",
-      "Gemeinsames Kochen",
-    "Postgänge",
-    "Sonstige Begleitungen",
-  ],
-  "Freizeit und Soziale Aktivitäten": [
-    "Gesellschaft leisten",
-  "Biografiearbeit",
-    "Vorlesen",
-   "Gesellschaftspiele",
-    "Ausflüge und Reisebegleitung",
-  ],
-  "Gesundheitsführsorge": [
-    "Körperliche Unterstützung",
-    "Nahrungsaufnahme",
-    "Grundpflegerische Tätigkeiten",
-    "Gesundheitsfördernde Aktivitäten",
-    "Geistige Unterstützung",
-  ],
-  "Haushaltshilfe und Wohnpflege": [
-    "Hauswirtschaft",
-    "Balkon und Blumenpflege",
-    "Waschen / Bügeln",
-    "Kochen",
-    "Fenster Putzen",
-    "Bettwäsche wechseln",
-    "Aufräumen",
-    "Trennung / Entsorgung / Abfall",
-    "Abstauben",
-    "Staubsaugen",
-    "Boden wischen",
-    "Vorhänge reinigen",
-  ],
-};
+const services = SERVICE_CATALOG;
 const refs = {
   availabilityFrom: useRef(null),
   availabilityDays: useRef(null),
@@ -426,12 +391,14 @@ const payload = {
       body: JSON.stringify({ email: form.email, firstName: form.firstName }),
     });
 
- setSubmissionMessage(
-  `Vielen Dank für Ihre Bewerbung bei der Prime Home Care AG. Wir haben Ihre Unterlagen erfolgreich erhalten und werden diese sorgfältig prüfen. Wir melden uns so bald wie möglich mit weiteren Informationen bei Ihnen.`
- );
+    setSubmissionMessage(
+      `Vielen Dank für Ihre Bewerbung bei der Prime Home Care AG. Wir haben Ihre Unterlagen erfolgreich erhalten und werden diese sorgfältig prüfen. Wir melden uns so bald wie möglich mit weiteren Informationen bei Ihnen.`
+    );
 
-
-    
+    // F-06: redirect to a dedicated thank-you page so the form doesn't loop
+    // the user back to step 4 with their data still present. The page is the
+    // explicit "done" state.
+    router.push("/bewerbung-erfolgreich");
   } catch (error) {
     setSubmissionMessage("❌ Fehler beim Hochladen oder Senden der Daten.");
     setIsSubmitted(false);
@@ -849,6 +816,7 @@ useEffect(() => {
     <label className="block font-medium mb-2">
       Wie viele Stunden pro Woche möchtest du arbeiten?
     </label>
+    <p className="text-xs text-gray-500 mb-2">Mehrfachauswahl möglich.</p>
     <div className="grid grid-cols-2 sm:grid-cols-3 mb-5 gap-3">
       {[
         { label: "40h / 100%", value: "40" },
@@ -857,13 +825,24 @@ useEffect(() => {
         { label: "16h / 40%", value: "16" },
         { label: "8h / 20%", value: "8" },
       ].map((option) => {
-        const selected = form.desiredWeeklyHours === option.value;
+        const current = Array.isArray(form.desiredWeeklyHours)
+          ? form.desiredWeeklyHours
+          : (form.desiredWeeklyHours ? [form.desiredWeeklyHours] : []);
+        const selected = current.includes(option.value);
         return (
           <button
             key={option.value}
             type="button"
             onClick={() =>
-              setForm((prev) => ({ ...prev, desiredWeeklyHours: option.value }))
+              setForm((prev) => {
+                const list = Array.isArray(prev.desiredWeeklyHours)
+                  ? prev.desiredWeeklyHours
+                  : (prev.desiredWeeklyHours ? [prev.desiredWeeklyHours] : []);
+                const next = list.includes(option.value)
+                  ? list.filter((v) => v !== option.value)
+                  : [...list, option.value];
+                return { ...prev, desiredWeeklyHours: next };
+              })
             }
             className={`px-4 py-3 rounded-lg border text-sm font-medium transition-all ${
               selected
@@ -1368,7 +1347,7 @@ Info: z.B. Wochenende Milano oder 10 Tage Kreuzfahrt
       disabled={isSubmitted}
       className="px-6 py-3 bg-[#04436F] text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
     >
-      {isSubmitted ? "Wird gesendet..." : "Registrierung abschliessen"}
+      {isSubmitted ? "Wird gesendet..." : "Bewerbung absenden"}
     </button>
   )}
 </div>

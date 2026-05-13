@@ -84,7 +84,7 @@ async function sendSetupEmail(userEmail, fullName, token) {
       subject: "Willkommen bei Prime Home Care AG – Passwort erstellen",
       html: `<p>Hallo ${escapedName}</p>
 <p>Vielen Dank für Ihre Registrierung bei Prime Home Care AG.</p>
-<p><a href="${baseUrl}/reset-password?resetToken=${token}" style="display:inline-block;background-color:#B99B5F;color:#fff;padding:10px 18px;border-radius:5px;text-decoration:none;font-weight:bold;">Passwort erstellen</a></p>
+<p><a href="${baseUrl}/setpassword?token=${token}" style="display:inline-block;background-color:#B99B5F;color:#fff;padding:10px 18px;border-radius:5px;text-decoration:none;font-weight:bold;">Passwort erstellen</a></p>
 <p>Ihr Prime Home Care Team</p>`,
     });
   } catch (error) {

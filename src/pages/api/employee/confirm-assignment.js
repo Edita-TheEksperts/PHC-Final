@@ -1,5 +1,6 @@
 import { prisma } from "../../../lib/prisma";
 import nodemailer from "nodemailer";
+import { recipientEmail } from "../../../lib/recipientEmail";
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
@@ -63,9 +64,10 @@ export default async function handler(req, res) {
         // Send email to client (customer) about assignment acceptance
         const {sendAssignmentAcceptedEmail} = await import("../../../lib/mailer.js");
         await sendAssignmentAcceptedEmail({
-          email: updated.user.email,
+          email: recipientEmail(updated.user),
           firstName: updated.user.firstName,
           lastName: updated.user.lastName,
+          anrede: updated.user.anrede,
           employeeFirstName: updated.employee.firstName,
           employeeLastName: updated.employee.lastName,
           employeePhone: updated.employee.phone || '',

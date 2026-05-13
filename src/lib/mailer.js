@@ -1,6 +1,9 @@
 import nodemailer from "nodemailer";
 import PDFDocument from "pdfkit";
 import path from "path";
+import { recipientEmail } from "./recipientEmail";
+import { formalGreeting } from "./salutation";
+import { renderEmail } from "./emailTemplate";
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
@@ -20,44 +23,60 @@ export async function sendAssignmentCancelledEmail({ schedule, reason }) {
   const duration = hours ? `${hours} Std` : '';
   const service = serviceName || '';
 
-  // 1. Client notification
-  if (user?.email) {
+  // 1. Client notification — goes to the requester (Auftraggeber) when set,
+  //    otherwise to the user's own address.
+  const clientTo = recipientEmail(user);
+  if (clientTo) {
+    const fallbackHtml = `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <p>{{greeting}}</p>
+        <p>Ihr geplanter Einsatz am <b>{{date}}</b> um <b>{{startTime}}</b> ({{duration}}) für den Service <b>{{service}}</b> wurde storniert.</p>
+        <p>Grund: {{reason}}</p>
+        <br>
+        <p>Freundliche Grüsse<br>Prime Home Care AG<br>Birkenstrasse 49<br>CH-6343 Rotkreuz<br>info@phc.ch<br>www.phc.ch</p>
+      </div>
+    `;
+    const { subject, html } = await renderEmail("assignmentCancelledClient", {
+      greeting: formalGreeting(user),
+      date: formattedDate, startTime: formattedTime, duration, service,
+      reason: reason || '-',
+    }, { fallbackSubject: 'Ihr Einsatz wurde storniert', fallbackHtml });
+
     try {
       await transporter.sendMail({
         from: `"Prime Home Care AG" <${process.env.SMTP_USER}>`,
-        to: user.email,
-        subject: 'Ihr Einsatz wurde storniert',
-        html: `
-          <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-            <p>Hallo ${user.firstName || ''} ${user.lastName || ''}</p>
-            <p>Ihr geplanter Einsatz am <b>${formattedDate}</b> um <b>${formattedTime}</b> (${duration}) für den Service <b>${service}</b> wurde storniert.</p>
-            <p>Grund: ${reason || '-'}</p>
-            <br>
-            <p>Freundliche Grüsse<br>Prime Home Care AG<br>Birkenstrasse 49<br>CH-6343 Rotkreuz<br>info@phc.ch<br>www.phc.ch</p>
-          </div>
-        `
+        to: clientTo,
+        subject,
+        html,
       });
     } catch (error) {
-      console.error('[sendAssignmentCancelledEmail] Failed to send client notification to', user.email, error);
+      console.error('[sendAssignmentCancelledEmail] Failed to send client notification to', clientTo, error);
     }
   }
 
   // 2. Employee notification
   if (employee?.email) {
+    const fallbackHtml = `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <p>{{greeting}}</p>
+        <p>Ihr geplanter Einsatz am <b>{{date}}</b> um <b>{{startTime}}</b> ({{duration}}) für den Service <b>{{service}}</b> wurde storniert.</p>
+        <p>Grund: {{reason}}</p>
+        <br>
+        <p>Freundliche Grüsse<br>Prime Home Care AG<br>Birkenstrasse 49<br>CH-6343 Rotkreuz<br>info@phc.ch<br>www.phc.ch</p>
+      </div>
+    `;
+    const { subject, html } = await renderEmail("assignmentCancelledEmployee", {
+      greeting: formalGreeting({ firstName: employee.firstName, lastName: employee.lastName, anrede: employee.salutation }),
+      date: formattedDate, startTime: formattedTime, duration, service,
+      reason: reason || '-',
+    }, { fallbackSubject: 'Ihr Einsatz wurde storniert', fallbackHtml });
+
     try {
       await transporter.sendMail({
         from: `"Prime Home Care AG" <${process.env.SMTP_USER}>`,
         to: employee.email,
-        subject: 'Ihr Einsatz wurde storniert',
-        html: `
-          <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-            <p>Hallo ${employee.firstName || ''} ${employee.lastName || ''}</p>
-            <p>Ihr geplanter Einsatz am <b>${formattedDate}</b> um <b>${formattedTime}</b> (${duration}) für den Service <b>${service}</b> wurde storniert.</p>
-            <p>Grund: ${reason || '-'}</p>
-            <br>
-            <p>Freundliche Grüsse<br>Prime Home Care AG<br>Birkenstrasse 49<br>CH-6343 Rotkreuz<br>info@phc.ch<br>www.phc.ch</p>
-          </div>
-        `
+        subject,
+        html,
       });
     } catch (error) {
       console.error('[sendAssignmentCancelledEmail] Failed to send employee notification to', employee.email, error);
@@ -170,28 +189,35 @@ export async function sendAssignmentProposalEmail({ email, firstName, location, 
 }
 
 // --- Assignment Accepted (Notify Client) ---
-export async function sendAssignmentAcceptedEmail({ email, firstName, lastName, employeeFirstName, employeeLastName, employeePhone, serviceName, firstDate }) {
+export async function sendAssignmentAcceptedEmail({ email, firstName, lastName, anrede, employeeFirstName, employeeLastName, employeePhone, serviceName, firstDate }) {
+  const fallbackHtml = `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+      <p>{{greeting}}</p>
+      <p>Ihre Buchung wurde erfolgreich bestätigt und folgender Mitarbeiter wurde Ihnen zugewiesen.</p>
+      <p><strong>Betreuer:</strong> {{employeeFirstName}} {{employeeLastName}}</p>
+      <p><strong>Kontakt:</strong> {{employeePhone}}</p>
+      <p><strong>Service:</strong> {{serviceName}}</p>
+      <p>Startdatum: {{firstDate}}</p>
+      <p>Vielen Dank für Ihr Vertrauen.</p>
+      <br>
+      <p>Freundliche Grüsse<br>Prime Home Care AG<br>Birkenstrasse 49<br>CH-6343 Rotkreuz<br>info@phc.ch<br>www.phc.ch</p>
+    </div>
+  `;
+
+  const { subject, html } = await renderEmail("assignmentAccepted", {
+    greeting: formalGreeting({ firstName, lastName, anrede }),
+    employeeFirstName, employeeLastName, employeePhone, serviceName, firstDate,
+  }, {
+    fallbackSubject: "Ihre Buchung wurde erfolgreich bestätigt",
+    fallbackHtml,
+  });
+
   try {
     await transporter.sendMail({
+      from: `"Prime Home Care AG" <${process.env.SMTP_USER}>`,
       to: email,
-      subject: 'Ihre Buchung wurde erfolgreich bestätigt',
-      html: `
-        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-          <p>Hallo ${firstName} ${lastName}</p>
-          <p>Ihre Buchung wurde erfolgreich bestätigt und folgender Mitarbeiter wurde Ihnen zugewiesen.</p>
-          <p><strong>Betreuer:</strong> ${employeeFirstName} ${employeeLastName}</p>
-          <p><strong>Kontakt:</strong> ${employeePhone}</p>
-          <p><strong>Service:</strong> ${serviceName}</p>
-          <p>Startdatum: ${firstDate}</p>
-          <p>Vielen Dank für Ihr Vertrauen.</p>
-          <br>
-          <p>Freundliche Grüsse<br>Prime Home Care AG<br>Birkenstrasse 49<br>CH-6343 Rotkreuz<br>info@phc.ch<br>www.phc.ch</p>
-          <p>
-            <a href="https://phc.ch/AVB" target="_blank" style="text-decoration:underline;color:#04436F;font-weight:500;cursor:pointer;">AVB</a> und
-            <a href="https://phc.ch/nutzungsbedingungen" target="_blank" style="text-decoration:underline;color:#04436F;font-weight:500;cursor:pointer;">Nutzungsbedingungen</a>
-          </p>
-        </div>
-      `
+      subject,
+      html,
     });
   } catch (error) {
     console.error('[sendAssignmentAcceptedEmail] Failed to send email to', email, error);
@@ -226,25 +252,30 @@ export async function sendCancellationConfirmationEmail({ email, firstName, last
 }
 
 // --- Payment Confirmation (Client) ---
-export async function sendPaymentConfirmationEmail({ email, firstName, lastName, amount, bookingReference }) {
+export async function sendPaymentConfirmationEmail({ email, firstName, lastName, anrede, amount, bookingReference }) {
+  const fallbackHtml = `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+      <p>{{greeting}}</p>
+      <p>Wir bestätigen den Eingang Ihrer Zahlung über CHF {{amount}} zur Buchung {{bookingReference}}.</p>
+      <p>Ihre Rechnung finden Sie auf Ihrer persönlichen PHC-Plattform.</p>
+      <p>Bei Fragen stehen wir Ihnen jederzeit gerne zur Verfügung.</p>
+      <br>
+      <p>Freundliche Grüsse<br>Prime Home Care AG<br>Birkenstrasse 49<br>CH-6343 Rotkreuz<br>info@phc.ch<br>www.phc.ch</p>
+    </div>
+  `;
+  const { subject, html } = await renderEmail("paymentConfirmation", {
+    greeting: formalGreeting({ firstName, lastName, anrede }),
+    amount, bookingReference,
+  }, {
+    fallbackSubject: "Zahlungsbestätigung / Rechnung zu Ihrer Buchung",
+    fallbackHtml,
+  });
+
   try {
     await transporter.sendMail({
       to: email,
-      subject: 'Zahlungsbestätigung / Rechnung zu Ihrer Buchung',
-      html: `
-        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-          <p>Hallo ${firstName} ${lastName}</p>
-          <p>Wir bestätigen den Eingang Ihrer Zahlung über CHF ${amount} zur Buchung ${bookingReference}.</p>
-          <p>Ihre Rechnung finden Sie auf Ihrer persönlichen PHC-Plattform.</p>
-          <p>Bei Fragen stehen wir Ihnen jederzeit gerne zur Verfügung.</p>
-          <br>
-          <p>Freundliche Grüsse<br>Prime Home Care AG<br>Birkenstrasse 49<br>CH-6343 Rotkreuz<br>info@phc.ch<br>www.phc.ch</p>
-          <p>
-            <a href="https://phc.ch/AVB" target="_blank" style="text-decoration:underline;color:#04436F;font-weight:500;cursor:pointer;">AVB</a> und
-            <a href="https://phc.ch/nutzungsbedingungen" target="_blank" style="text-decoration:underline;color:#04436F;font-weight:500;cursor:pointer;">Nutzungsbedingungen</a>
-          </p>
-        </div>
-      `
+      subject,
+      html,
     });
   } catch (error) {
     console.error('[sendPaymentConfirmationEmail] Failed to send email to', email, error);
@@ -381,46 +412,85 @@ export async function sendRejectionWarningEmail({ email, firstName }) {
   }
 }
 // --- Client Welcome Email ---
-export async function sendClientWelcomeEmail({ email, firstName, lastName, passwordLink }) {
-
-  const html = `
+export async function sendClientWelcomeEmail({ email, firstName, lastName, anrede, passwordLink }) {
+  const fallbackHtml = `
     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-      <p>Hallo ${firstName} ${lastName}</p>
-      <p>Vielen Dank für Ihre Registrierung bei Prime Home Care AG.</p>
+      <p>{{greeting}}</p>
+      <p>Vielen Dank für Ihre Buchung bei Prime Home Care AG.</p>
       <p>Ihr Zugang zum Kundenportal wurde erfolgreich eingerichtet. Sie können dort:</p>
       <ul>
         <li>Buchungen verwalten</li>
         <li>Mit uns kommunizieren</li>
       </ul>
       <p><strong>Bitte erstellen Sie Ihr Passwort über den folgenden Link:</strong></p>
-      <a href="${passwordLink}"
+      <a href="{{passwordLink}}"
          style="display:inline-block; background-color:#B99B5F; color:#fff; padding:10px 18px; border-radius:5px; text-decoration:none; font-weight:bold;">
         Passwort erstellen
       </a>
       <br><br>
       <p>Freundliche Grüsse</p>
-      <p>Prime Home Care AG<br>
-        Birkenstrasse 49<br>
-        CH-6343 Rotkreuz<br>
-        info@phc.ch<br>
-        www.phc.ch
-      </p>
-      <p>
-        <a href="https://phc.ch/AVB" target="_blank" style="text-decoration:underline;color:#04436F;font-weight:500;cursor:pointer;">AVB</a> und 
-        <a href="https://phc.ch/nutzungsbedingungen" target="_blank" style="text-decoration:underline;color:#04436F;font-weight:500;cursor:pointer;">Nutzungsbedingungen</a>
-      </p>
+      <p>Prime Home Care AG<br>Birkenstrasse 49<br>CH-6343 Rotkreuz<br>info@phc.ch<br>www.phc.ch</p>
     </div>
   `;
+
+  const { subject, html } = await renderEmail("clientWelcome", {
+    greeting: formalGreeting({ firstName, lastName, anrede }),
+    firstName, lastName, passwordLink,
+  }, {
+    fallbackSubject: "Willkommen bei Prime Home Care – Ihr Zugang ist aktiv",
+    fallbackHtml,
+  });
 
   try {
     await transporter.sendMail({
       from: `"Prime Home Care AG" <${process.env.SMTP_USER}>`,
       to: email,
-      subject: "Willkommen bei Prime Home Care – Ihr Zugang ist aktiv",
+      subject,
       html,
     });
   } catch (error) {
     console.error('[sendClientWelcomeEmail] Failed to send email to', email, error);
+  }
+}
+
+// --- Applicant (Mitarbeiter-Bewerbung) Confirmation ---
+// F-06: sent after a candidate submits the employee registration form.
+// The candidate is told their application has arrived and what happens
+// next. A separate approval email (`sendApprovalEmail`) goes out later
+// once the admin reviews and approves the application.
+export async function sendApplicantConfirmationEmail({ email, firstName, lastName, salutation }) {
+  if (!email) return;
+
+  const fallbackHtml = `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+      <p>{{greeting}}</p>
+      <p>Vielen Dank für Ihre Bewerbung bei Prime Home Care AG.</p>
+      <p>Wir haben Ihre Unterlagen erhalten und prüfen diese sorgfältig. In der Regel
+      melden wir uns innerhalb von 2 bis 3 Werktagen bei Ihnen, um die nächsten Schritte
+      (in der Regel ein kurzes Interview) zu vereinbaren.</p>
+      <p>Bei Rückfragen erreichen Sie uns jederzeit unter info@phc.ch.</p>
+      <br>
+      <p>Freundliche Grüsse<br>Prime Home Care AG<br>Birkenstrasse 49<br>CH-6343 Rotkreuz<br>info@phc.ch<br>www.phc.ch</p>
+    </div>
+  `;
+
+  const { subject, html } = await renderEmail("applicantConfirmation", {
+    greeting: formalGreeting({ firstName, lastName, anrede: salutation }),
+    firstName, lastName,
+  }, {
+    fallbackSubject: "Ihre Bewerbung bei Prime Home Care AG",
+    fallbackHtml,
+  });
+
+  try {
+    await transporter.sendMail({
+      from: `"Prime Home Care AG" <${process.env.SMTP_USER}>`,
+      to: email,
+      subject,
+      html,
+    });
+  } catch (error) {
+    console.error('[sendApplicantConfirmationEmail] Failed to send to', email, error);
   }
 }
 
@@ -535,52 +605,58 @@ export function createRahmenvereinbarungPdf(employee) {
   });
 }
 
-export async function sendApprovalEmail(employee, plainPassword) {
+// F-16: this is the employee welcome email — sent once when admin approves a
+// candidate. The link points at /set-password with a single-use resetToken
+// (generated by approve-employee.js) so the employee can create their own
+// password. Previously this CTA pointed at /forgot-password and was worded
+// "Passwort zurücksetzen", which confused candidates who had never set one.
+export async function sendApprovalEmail(employee, passwordLink) {
   const { email, firstName, lastName } = employee;
-
 
   try {
     const rahmenBuffer = await createRahmenvereinbarungPdf(employee);
 
+    const fallbackHtml = `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <p>{{greeting}}</p>
+        <p>Vielen Dank für Ihre Bewerbung bei der Prime Home Care AG.
+        Ihr Zugang zum Mitarbeiter-Portal ist jetzt freigeschaltet.</p>
+        <p>Bitte erstellen Sie Ihr Passwort, um sich erstmals einzuloggen:</p>
+        <p>
+          <a href="{{passwordLink}}"
+             style="display:inline-block;background-color:#04436F;color:#fff;padding:12px 22px;border-radius:6px;text-decoration:none;font-weight:bold;">
+            Passwort erstellen
+          </a>
+        </p>
+        <p>Der Link ist 48 Stunden gültig. Im Anhang finden Sie Ihre Rahmenvereinbarung.</p>
+        <br>
+        <p>Freundliche Grüsse<br>Prime Home Care AG<br>Birkenstrasse 49<br>CH-6343 Rotkreuz<br>info@phc.ch<br>www.phc.ch</p>
+        <p>
+          <a href="https://phc.ch/AVB" target="_blank" style="text-decoration:underline;color:#04436F;font-weight:500;">AVB</a> und
+          <a href="https://phc.ch/nutzungsbedingungen" target="_blank" style="text-decoration:underline;color:#04436F;font-weight:500;">Nutzungsbedingungen</a>
+        </p>
+      </div>
+    `;
 
-    try {
-      const loginUrl = "https://phc.ch/login";
-      await transporter.sendMail({
-        from: `"Prime Home Care AG" <${process.env.SMTP_USER}>`,
-        to: email,
-        subject: "Willkommen im Prime Home Care Team – Ihr Zugang ist aktiviert",
-        html: `
-          <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-            <p>Hallo ${firstName}</p>
-            <p>Vielen Dank für Ihre Registrierung bei der Prime Home Care AG.</p>
-            <p>Ihr Zugang zum Mitarbeiter-Portal ist jetzt freigeschaltet.</p>
-            <ul>
-              <li>Login-Link: <a href="${loginUrl}">${loginUrl}</a></li>
-              <li>Benutzername: ${email}</li>
-            </ul>
-            <p>Hier zum Passwort zurücksetzen: <a href="https://www.phc.ch/forgot-password" style="text-decoration:underline;color:#04436F;font-weight:500;cursor:pointer;">Passwort zurücksetzen</a></p>
-            <p>Im Anhang finden Sie Ihre Rahmenvereinbarung.</p>
-            <br>
-            <p>Freundliche Grüsse</p>
-            <p>Prime Home Care AG<br>
-            Birkenstrasse 49<br>
-            CH-6343 Rotkreuz<br>
-            info@phc.ch<br>
-            www.phc.ch</p>
-            <p>
-              <a href="https://phc.ch/AVB" target="_blank" style="text-decoration:underline;color:#04436F;font-weight:500;cursor:pointer;">AVB</a> und 
-              <a href="https://phc.ch/nutzungsbedingungen" target="_blank" style="text-decoration:underline;color:#04436F;font-weight:500;cursor:pointer;">Nutzungsbedingungen</a>
-            </p>
-          </div>
-        `,
-        attachments: [
-          { filename: `Rahmenvereinbarung_${firstName}_${lastName}.pdf`, content: rahmenBuffer },
-        ],
-      });
-    } catch (err) {
-      throw err;
-    }
+    const { subject, html } = await renderEmail("employeeWelcome", {
+      greeting: formalGreeting({ firstName, lastName, anrede: employee.salutation }),
+      firstName,
+      lastName,
+      passwordLink: passwordLink || "https://phc.ch/login",
+    }, {
+      fallbackSubject: "Willkommen bei Prime Home Care AG – Bitte erstellen Sie Ihr Passwort",
+      fallbackHtml,
+    });
 
+    await transporter.sendMail({
+      from: `"Prime Home Care AG" <${process.env.SMTP_USER}>`,
+      to: email,
+      subject,
+      html,
+      attachments: [
+        { filename: `Rahmenvereinbarung_${firstName}_${lastName}.pdf`, content: rahmenBuffer },
+      ],
+    });
   } catch (error) {
     throw new Error(`Failed to send approval email: ${error.message}`);
   }

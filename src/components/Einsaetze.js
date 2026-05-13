@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 export default function Einsaetze() {
   const [data, setData] = useState(null);
@@ -15,6 +16,8 @@ export default function Einsaetze() {
   const [assignLoading, setAssignLoading] = useState(false);
   const [recommendations, setRecommendations] = useState([]);
   const [recsLoaded, setRecsLoaded] = useState(false);
+  const [editError, setEditError] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
 
   // Fetch matchmaking when an unassigned schedule is selected
   useEffect(() => {
@@ -28,7 +31,7 @@ export default function Einsaetze() {
       headers: { "Authorization": `Bearer ${localStorage.getItem("userToken")}` }
     })
       .then(r => r.json())
-      .then(d => { setRecommendations(Array.isArray(d) ? d.slice(0, 3) : []); setRecsLoaded(true); })
+      .then(d => { setRecommendations(Array.isArray(d) ? d.slice(0, 5) : []); setRecsLoaded(true); })
       .catch(() => { setRecommendations([]); setRecsLoaded(true); });
   }, [selectedItem?.id]);
 
@@ -95,6 +98,8 @@ export default function Einsaetze() {
   };
 
   const saveEditedEinsatz = async () => {
+    setEditError("");
+    setEditSaving(true);
     try {
       const res = await fetch(`/api/admin/schedules/${editItem.id}/edit`, {
         method: "PATCH",
@@ -102,7 +107,10 @@ export default function Einsaetze() {
         body: JSON.stringify(editItem),
       });
       const updated = await res.json();
-      if (!res.ok || !updated || updated.error) return;
+      if (!res.ok || !updated || updated.error) {
+        setEditError(updated?.error || updated?.message || `Speichern fehlgeschlagen (HTTP ${res.status}).`);
+        return;
+      }
       setData((prev) => {
         const newData = { ...prev };
         for (const key of Object.keys(newData)) {
@@ -115,7 +123,11 @@ export default function Einsaetze() {
         return newData;
       });
       setEditItem(null);
-    } catch {}
+    } catch (err) {
+      setEditError(err?.message || "Netzwerkfehler beim Speichern.");
+    } finally {
+      setEditSaving(false);
+    }
   };
 
   const assignEmployeeToSchedule = async (empId) => {
@@ -204,13 +216,30 @@ export default function Einsaetze() {
   );
   if (!data) return <div className="px-6 py-6 text-sm text-gray-500">Keine Daten gefunden.</div>;
 
+  const STATUS_LABELS = {
+    active: "Aktiv",
+    pending: "Ausstehend",
+    approved: "Genehmigt",
+    rejected: "Abgelehnt",
+    completed: "Abgeschlossen",
+    done: "Abgeschlossen",
+    cancelled: "Storniert",
+    canceled: "Storniert",
+    storniert: "Storniert",
+    terminated: "Beendet",
+    modified: "Geändert",
+    confirmed: "Bestätigt",
+  };
+  const labelFor = (s) => STATUS_LABELS[s] || s || "—";
+
   const statusBadge = (status) => {
-    const isCancelled = status === "storniert" || status === "cancelled";
+    const isCancelled = status === "storniert" || status === "cancelled" || status === "canceled";
     const base = "px-2 py-0.5 rounded-full text-xs font-medium border";
-    if (isCancelled) return <span className={`${base} bg-red-50 text-red-700 border-red-200`}>{status}</span>;
-    if (status === "completed") return <span className={`${base} bg-emerald-50 text-emerald-700 border-emerald-200`}>{status}</span>;
-    if (status === "active") return <span className={`${base} bg-blue-50 text-blue-700 border-blue-200`}>{status}</span>;
-    return <span className={`${base} bg-gray-50 text-gray-600 border-gray-200`}>{status}</span>;
+    const label = labelFor(status);
+    if (isCancelled) return <span className={`${base} bg-red-50 text-red-700 border-red-200`}>{label}</span>;
+    if (status === "completed" || status === "done") return <span className={`${base} bg-emerald-50 text-emerald-700 border-emerald-200`}>{label}</span>;
+    if (status === "active") return <span className={`${base} bg-blue-50 text-blue-700 border-blue-200`}>{label}</span>;
+    return <span className={`${base} bg-gray-50 text-gray-600 border-gray-200`}>{label}</span>;
   };
 
   const renderList = (list) => {
@@ -243,10 +272,26 @@ export default function Einsaetze() {
                 <td className="px-4 py-3 text-sm text-gray-600">{item.startTime || "—"}</td>
                 <td className="px-4 py-3 text-sm text-gray-600">{item.hours || "—"}</td>
                 <td className="px-4 py-3 text-sm text-gray-900">
-                  {item.user ? `${item.user.firstName} ${item.user.lastName}` : "—"}
+                  {item.user ? (
+                    <a
+                      href={`/admin/clients/${item.user.id}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="hover:text-[#04436F] hover:underline"
+                    >
+                      {item.user.firstName} {item.user.lastName}
+                    </a>
+                  ) : "—"}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600">
-                  {item.employee ? `${item.employee.firstName} ${item.employee.lastName}` : (
+                  {item.employee ? (
+                    <a
+                      href={`/admin/employees/${item.employee.id}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="hover:text-[#04436F] hover:underline"
+                    >
+                      {item.employee.firstName} {item.employee.lastName}
+                    </a>
+                  ) : (
                     <span className="text-amber-600 font-medium">Nicht zugewiesen</span>
                   )}
                 </td>
@@ -389,14 +434,26 @@ export default function Einsaetze() {
               {selectedItem.user && (
                 <div className="flex justify-between">
                   <span className="text-gray-500">Kunde</span>
-                  <span className="font-medium text-gray-900">{selectedItem.user.firstName} {selectedItem.user.lastName}</span>
+                  <Link
+                    href={`/admin/clients/${selectedItem.user.id}`}
+                    className="font-medium text-[#04436F] hover:underline"
+                  >
+                    {selectedItem.user.firstName} {selectedItem.user.lastName}
+                  </Link>
                 </div>
               )}
               <div className="flex justify-between">
                 <span className="text-gray-500">Mitarbeiter</span>
-                <span className="font-medium text-gray-900">
-                  {selectedItem.employee ? `${selectedItem.employee.firstName} ${selectedItem.employee.lastName}` : "Nicht zugewiesen"}
-                </span>
+                {selectedItem.employee ? (
+                  <Link
+                    href={`/admin/employees/${selectedItem.employee.id}`}
+                    className="font-medium text-[#04436F] hover:underline"
+                  >
+                    {selectedItem.employee.firstName} {selectedItem.employee.lastName}
+                  </Link>
+                ) : (
+                  <span className="font-medium text-gray-900">Nicht zugewiesen</span>
+                )}
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Status</span>
@@ -418,29 +475,52 @@ export default function Einsaetze() {
                   {!recsLoaded && <p className="text-xs text-gray-400 italic">Lade Empfehlungen...</p>}
                   {recsLoaded && recommendations.length === 0 && <p className="text-xs text-amber-600 italic">Keine passenden Empfehlungen gefunden.</p>}
                   {recommendations.length > 0 && (
-                    <div className="space-y-1.5">
-                      {recommendations.map((r) => (
-                        <div key={r.employeeId} className="flex items-center justify-between p-2 bg-emerald-50 border border-emerald-200 rounded-lg">
-                          <div>
-                            <span className="text-sm font-medium text-emerald-900">{r.firstName} {r.lastName}</span>
-                            <span className="ml-2 text-xs text-emerald-600">({r.score}%)</span>
-                            {r.reasons?.length > 0 && <p className="text-xs text-emerald-600 mt-0.5">{r.reasons.join(" · ")}</p>}
+                    <div className="space-y-2">
+                      {recommendations.map((r) => {
+                        const score = Math.max(0, Math.min(100, r.score || 0));
+                        const tone = score >= 70 ? "emerald" : score >= 40 ? "amber" : "gray";
+                        const tones = {
+                          emerald: { box: "bg-emerald-50 border-emerald-200", text: "text-emerald-900", soft: "text-emerald-700", bar: "bg-emerald-500" },
+                          amber:   { box: "bg-amber-50 border-amber-200",   text: "text-amber-900",   soft: "text-amber-700",   bar: "bg-amber-500"   },
+                          gray:    { box: "bg-gray-50 border-gray-200",     text: "text-gray-800",    soft: "text-gray-600",    bar: "bg-gray-400"    },
+                        }[tone];
+                        return (
+                          <div key={r.employeeId} className={`p-2.5 border rounded-lg ${tones.box}`}>
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className={`text-sm font-medium ${tones.text} truncate`}>{r.firstName} {r.lastName}</span>
+                                  <span className={`text-xs font-bold ${tones.soft} flex-shrink-0`}>{score}%</span>
+                                </div>
+                                <div className="mt-1 h-1.5 w-full rounded-full bg-white/60 overflow-hidden">
+                                  <div className={`h-full ${tones.bar}`} style={{ width: `${score}%` }} />
+                                </div>
+                                {(r.city || r.canton) && (
+                                  <p className={`text-[11px] mt-1 ${tones.soft}`}>📍 {[r.city, r.canton].filter(Boolean).join(" · ")}</p>
+                                )}
+                                {r.reasons?.length > 0 && (
+                                  <p className={`text-[11px] mt-0.5 ${tones.soft}`}>{r.reasons.join(" · ")}</p>
+                                )}
+                              </div>
+                              <button
+                                onClick={() => {
+                                  setSelectedItem((prev) => ({ ...prev, employeeId: r.employeeId }));
+                                  assignEmployeeToSchedule(r.employeeId);
+                                }}
+                                className="text-xs px-3 py-1 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 transition flex-shrink-0"
+                                title="Anfrage an Mitarbeiter senden – wird erst nach Bestätigung zur Zuweisung"
+                              >
+                                Anfragen
+                              </button>
+                            </div>
                           </div>
-                          <button
-                            onClick={() => {
-                              setSelectedItem((prev) => ({ ...prev, employeeId: r.employeeId }));
-                              assignEmployeeToSchedule(r.employeeId);
-                            }}
-                            className="text-xs px-3 py-1 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 transition"
-                          >
-                            Zuweisen
-                          </button>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Mitarbeiter zuweisen</p>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Anfrage an Mitarbeiter senden</p>
+                <p className="text-[11px] text-gray-400 -mt-1 mb-2 leading-tight">Der Mitarbeiter erhält eine Anfrage. Erst nach Bestätigung gilt der Einsatz als zugewiesen.</p>
                 <select
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#04436F]/20 focus:border-[#04436F]"
                   value={selectedItem.employeeId || ""}
@@ -456,7 +536,7 @@ export default function Einsaetze() {
                   disabled={!selectedItem.employeeId || assignLoading}
                   className="mt-3 w-full bg-[#04436F] hover:bg-[#033558] text-white py-2 rounded-lg text-sm disabled:bg-gray-200 disabled:text-gray-400 transition"
                 >
-                  {assignLoading ? "Zuweisen..." : "Mitarbeiter zuweisen"}
+                  {assignLoading ? "Sendet…" : "Anfrage senden"}
                 </button>
               </div>
             )}
@@ -495,9 +575,24 @@ export default function Einsaetze() {
                 <span className="text-xs text-gray-400">Unterdienst: </span>{editItem.subServiceName || "—"}
               </div>
             </div>
+            {editError && (
+              <p className="mt-3 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{editError}</p>
+            )}
             <div className="flex gap-3 mt-5">
-              <button onClick={() => setEditItem(null)} className="flex-1 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-100 transition">Abbrechen</button>
-              <button onClick={saveEditedEinsatz} className="flex-1 py-2 text-sm bg-[#04436F] text-white rounded-lg hover:bg-[#033558] transition">Speichern</button>
+              <button
+                onClick={() => { setEditItem(null); setEditError(""); }}
+                disabled={editSaving}
+                className="flex-1 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-100 transition disabled:opacity-50"
+              >
+                Abbrechen
+              </button>
+              <button
+                onClick={saveEditedEinsatz}
+                disabled={editSaving}
+                className="flex-1 py-2 text-sm bg-[#04436F] text-white rounded-lg hover:bg-[#033558] transition disabled:opacity-60"
+              >
+                {editSaving ? "Speichert…" : "Speichern"}
+              </button>
             </div>
           </div>
         </div>

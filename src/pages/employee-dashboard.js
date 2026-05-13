@@ -4,6 +4,8 @@ import "react-datepicker/dist/react-datepicker.css";
 import { useRouter } from "next/router";
 import AssignmentsList from "../components/AssignmentList";
 import EmployeeLayout from "../components/EmployeeLayout";
+import { authFetch, clearAuthStorage, isTokenExpired } from "../lib/clientAuth";
+import { ASSIGNMENT_STATUS, labelFor } from "../lib/statusLabels";
 
 export default function EmployeeDashboard() {
   const [vacations, setVacations] = useState([]);
@@ -25,58 +27,102 @@ export default function EmployeeDashboard() {
   const [detailsOpen, setDetailsOpen] = useState(null);
   const router = useRouter();
 
+  // Sub-tab inside the "Einsätze" view (F-33): Kommend / Laufend / Vergangen
+  const [einsaetzeSubTab, setEinsaetzeSubTab] = useState("kommend");
+
   // Handle tab from URL query
   useEffect(() => {
     const tab = router.query.tab;
     if (tab === "einsaetze") setActiveTab("confirmed");
+    else if (tab === "zuweisungen") setActiveTab("pending");
     else if (tab === "urlaub") setActiveTab("vacation");
     else if (tab === "nachrichten") setActiveTab("nachrichten");
   }, [router.query.tab]);
 
   useEffect(() => {
     const email = localStorage.getItem("email");
-    if (!email) { router.push("/login"); return; }
-    fetch("/api/get-employee", {
+    const token = localStorage.getItem("userToken");
+    // If there's no session at all, or the token is past its exp, treat the
+    // tab as logged-out instead of letting it render with stale data.
+    if (!email || (token && isTokenExpired(token))) {
+      clearAuthStorage();
+      router.push("/login");
+      return;
+    }
+    // F-31: route through authFetch so a 401 (expired token / kicked-out
+    // session) cleanly redirects to /login instead of silently showing
+    // an empty dashboard.
+    authFetch("/api/get-employee", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email }),
     })
-      .then(r => r.json())
+      .then(r => r.ok ? r.json() : null)
       .then(setEmployeeData)
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [router]);
 
-  useEffect(() => {
-    if (!employeeData?.email) return;
-    const email = employeeData.email;
-    const post = (url) => fetch(url, {
+  // Pulled out so we can re-run after accept/reject. Dedupe by id on every
+  // setState — without that, an optimistic update + refetch could land the
+  // same assignment in the list twice.
+  const reloadAssignments = async (email) => {
+    if (!email) return;
+    const post = (url) => authFetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email }),
-    }).then(r => r.json());
+    }).then(r => r.ok ? r.json() : []);
 
-    Promise.all([
+    const [rejected, vacList, pending, confirmed, totals] = await Promise.all([
       post("/api/employee/rejected-assignments"),
       post("/api/employee/vacations"),
       post("/api/employee/pending-assignments"),
       post("/api/employee/confirmed-assignments"),
       post("/api/employee/total-payment"),
-    ]).then(([rejected, vacList, pending, confirmed, totals]) => {
-      setRejectedAssignments(rejected);
-      setVacations(vacList);
-      setPendingAssignments(pending);
-      setConfirmedAssignments(confirmed);
-      setPaymentTotals(totals);
-    });
+    ]);
+    const dedupe = (list) => {
+      const seen = new Set();
+      return (Array.isArray(list) ? list : []).filter(a => {
+        if (!a || a.id == null) return false;
+        if (seen.has(a.id)) return false;
+        seen.add(a.id);
+        return true;
+      });
+    };
+    setRejectedAssignments(dedupe(rejected));
+    setVacations(Array.isArray(vacList) ? vacList : []);
+    setPendingAssignments(dedupe(pending));
+    setConfirmedAssignments(dedupe(confirmed));
+    setPaymentTotals(totals);
+  };
+
+  useEffect(() => {
+    if (!employeeData?.email) return;
+    reloadAssignments(employeeData.email);
 
     // Load sent messages (excluding admin task entries)
     if (employeeData?.id) {
-      fetch(`/api/admin/notes?employeeId=${employeeData.id}&messagesOnly=true`)
+      authFetch(`/api/admin/notes?employeeId=${employeeData.id}&messagesOnly=true`)
         .then(r => r.json())
         .then(d => setSentMessages(d.notes || []))
         .catch(() => {});
     }
+
+    // F-36: when the dashboard tab regains focus, refetch assignments so a
+    // new admin-side Anfrage shows up without the employee having to log
+    // out and back in. Lightweight SWR-equivalent without the dependency.
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        reloadAssignments(employeeData.email);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+    };
   }, [employeeData]);
 
   const handleVacationSave = async () => {
@@ -104,10 +150,11 @@ export default function EmployeeDashboard() {
       body: JSON.stringify({ assignmentId, action }),
     });
     if (res.ok) {
-      const { assignment: updated } = await res.json();
-      setPendingAssignments(prev => prev.filter(a => a.id !== assignmentId));
-      if (action === "confirmed") setConfirmedAssignments(prev => [...prev, updated]);
-      if (action === "rejected") setRejectedAssignments(prev => [...prev, updated]);
+      // Refetch everything from the server instead of mutating state by hand.
+      // The previous optimistic path was leaving stale records in pendingAssignments
+      // and could duplicate the entry in confirmedAssignments — the user only saw
+      // the correct state after a full re-login.
+      await reloadAssignments(employeeData?.email);
     }
   };
 
@@ -383,7 +430,7 @@ export default function EmployeeDashboard() {
                             <p className="text-sm text-gray-500">{a.user?.services?.map(s => s.name).join(", ") || "—"}</p>
                           </div>
                           <span className="flex-shrink-0 text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 rounded-full px-2.5 py-1">
-                            Ausstehend
+                            {labelFor(ASSIGNMENT_STATUS, a.confirmationStatus || "pending")}
                           </span>
                         </div>
 
@@ -468,10 +515,57 @@ export default function EmployeeDashboard() {
                 </div>
               )}
 
-              {/* Einsätze */}
-              {activeTab === "confirmed" && (
-                <AssignmentsList confirmedAssignments={confirmedAssignments} />
-              )}
+              {/* Einsätze – F-33: sub-tabs Kommend / Laufend / Vergangen */}
+              {activeTab === "confirmed" && (() => {
+                const now = new Date();
+                const todayKey = now.toDateString();
+                const partition = { kommend: [], laufend: [], vergangen: [] };
+                confirmedAssignments.forEach((a) => {
+                  const schedules = a.user?.schedules || [];
+                  // Determine the assignment's "anchor date": earliest upcoming or the
+                  // most recent if everything is past.
+                  const upcoming = schedules
+                    .filter(s => s.date && new Date(s.date) >= now)
+                    .sort((x, y) => new Date(x.date) - new Date(y.date))[0];
+                  const past = schedules
+                    .filter(s => s.date)
+                    .sort((x, y) => new Date(y.date) - new Date(x.date))[0];
+                  const anchor = upcoming?.date || past?.date;
+                  if (!anchor) { partition.kommend.push(a); return; }
+                  const d = new Date(anchor);
+                  if (d.toDateString() === todayKey) partition.laufend.push(a);
+                  else if (d > now) partition.kommend.push(a);
+                  else partition.vergangen.push(a);
+                });
+                const subTabs = [
+                  { id: "kommend",   label: "Kommend",   count: partition.kommend.length },
+                  { id: "laufend",   label: "Laufend",   count: partition.laufend.length },
+                  { id: "vergangen", label: "Vergangen", count: partition.vergangen.length },
+                ];
+                return (
+                  <div className="space-y-4">
+                    <div className="flex gap-2 border-b border-gray-100 pb-2">
+                      {subTabs.map(st => (
+                        <button
+                          key={st.id}
+                          onClick={() => setEinsaetzeSubTab(st.id)}
+                          className={`px-3 py-1.5 text-sm font-medium rounded-lg transition ${
+                            einsaetzeSubTab === st.id
+                              ? "bg-[#04436F] text-white"
+                              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                          }`}
+                        >
+                          {st.label}
+                          <span className={`ml-1.5 text-xs font-bold ${einsaetzeSubTab === st.id ? "text-white/80" : "text-gray-500"}`}>
+                            {st.count}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                    <AssignmentsList confirmedAssignments={partition[einsaetzeSubTab] || []} />
+                  </div>
+                );
+              })()}
 
               {/* Urlaub */}
               {activeTab === "vacation" && (

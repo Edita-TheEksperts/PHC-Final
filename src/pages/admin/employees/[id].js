@@ -482,7 +482,27 @@ const filteredTermine =
                 }}
               >
                 <InfoRow label="Verfügbar ab" value={formatDate(employee.availabilityFrom)} />
-                <InfoRow label="Tage" value={(employee.availabilityDays || []).join(", ")} />
+                <div className="py-2">
+                  <p className="text-xs font-medium text-gray-500 mb-2">Tage & Zeiten</p>
+                  {Array.isArray(employee.availabilityDays) && employee.availabilityDays.length > 0 ? (
+                    <ul className="space-y-1">
+                      {employee.availabilityDays.map((entry, idx) => {
+                        // Entries are formatted as "Day: HH:MM-HH:MM" from registration.
+                        const colonAt = entry.indexOf(":");
+                        const day = colonAt > -1 ? entry.slice(0, colonAt).trim() : entry;
+                        const time = colonAt > -1 ? entry.slice(colonAt + 1).trim() : "";
+                        return (
+                          <li key={idx} className="flex items-center justify-between text-sm bg-gray-50 px-2.5 py-1 rounded-md">
+                            <span className="font-medium text-gray-700">{day}</span>
+                            {time && <span className="text-xs text-gray-500">{time}</span>}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-gray-400">—</p>
+                  )}
+                </div>
               </InfoCard>
 
               {/* Angebotene Dienstleistungen */}
@@ -493,8 +513,26 @@ const filteredTermine =
                 });
                 setEditServices(true);
               }}>
-                <InfoRow label="Angebotene Services" value={Array.isArray(employee.servicesOffered) && employee.servicesOffered.length ? employee.servicesOffered.join(", ") : "—"} />
-                <InfoRow label="Spezialausbildungen" value={Array.isArray(employee.specialTrainings) && employee.specialTrainings.length ? employee.specialTrainings.join(", ") : "—"} />
+                <div className="py-2">
+                  <p className="text-xs font-medium text-gray-500 mb-2">Angebotene Services</p>
+                  {Array.isArray(employee.servicesOffered) && employee.servicesOffered.length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {employee.servicesOffered.map((s, idx) => (
+                        <span key={idx} className="text-xs bg-[#04436F]/5 text-[#04436F] border border-[#04436F]/20 px-2 py-0.5 rounded-full">{s}</span>
+                      ))}
+                    </div>
+                  ) : <p className="text-sm text-gray-400">—</p>}
+                </div>
+                <div className="py-2">
+                  <p className="text-xs font-medium text-gray-500 mb-2">Spezialausbildungen</p>
+                  {Array.isArray(employee.specialTrainings) && employee.specialTrainings.length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {employee.specialTrainings.map((s, idx) => (
+                        <span key={idx} className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full">{s}</span>
+                      ))}
+                    </div>
+                  ) : <p className="text-sm text-gray-400">—</p>}
+                </div>
               </InfoCard>
 
               {/* Fähigkeiten & Sprachen */}
@@ -535,7 +573,7 @@ const filteredTermine =
                 <InfoRow label="Reisebegleitung" value={employee.travelSupport} />
                 <InfoRow label="Körperpflege" value={employee.bodyCareSupport} />
                 <InfoRow label="Arbeitet mit Tieren" value={employee.worksWithAnimals} />
-                <InfoRow label="Gewünschte Wochenstunden" value={employee.desiredWeeklyHours} />
+                <InfoRow label="Gewünschte Wochenstunden" value={Array.isArray(employee.desiredWeeklyHours) ? employee.desiredWeeklyHours.map(h => `${h}h`).join(", ") : employee.desiredWeeklyHours} />
                 <InfoRow label="Reisebereitschaft" value={employee.howFarCanYouTravel} />
               </InfoCard>
 

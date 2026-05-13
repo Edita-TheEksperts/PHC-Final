@@ -105,6 +105,9 @@ export default function AssignmentsList({ confirmedAssignments = [], onUpdate })
         clientPLZ: client.carePostalCode || client.postalCode,
         clientCity: client.careCity,
         service: client.services?.map(s => s.name).join(", ") || "—",
+        subServices: schedule.subServiceName
+          ? schedule.subServiceName.split(",").map(t => t.trim()).filter(Boolean)
+          : (client.subServices || []).map(s => s.name),
         date,
         startTime: schedule.startTime,
         status,
@@ -141,6 +144,22 @@ export default function AssignmentsList({ confirmedAssignments = [], onUpdate })
           )}
         </div>
 
+        {(s.clientStreet || s.clientCity) && (
+          <p className="text-xs text-gray-600">
+            📍 {s.clientStreet && `${s.clientStreet}, `}{s.clientPLZ && `${s.clientPLZ} `}{s.clientCity || ""}
+          </p>
+        )}
+
+        {s.subServices?.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {s.subServices.map((sub, idx) => (
+              <span key={idx} className="text-[10px] bg-[#B99B5F]/10 text-[#8a7040] border border-[#B99B5F]/20 px-1.5 py-0.5 rounded-full">
+                {sub}
+              </span>
+            ))}
+          </div>
+        )}
+
         <div className="flex items-center justify-between pb-1">
           <div className="flex gap-4 text-xs text-gray-500">
             <span>{s.baseHours} Std</span>
@@ -151,7 +170,7 @@ export default function AssignmentsList({ confirmedAssignments = [], onUpdate })
             onClick={() => setDetailsOpen(detailsOpen === s.id ? null : s.id)}
             className="text-xs font-medium text-[#04436F] hover:underline"
           >
-            {detailsOpen === s.id ? "Ausblenden" : "Details"}
+            {detailsOpen === s.id ? "Ausblenden" : "Kontaktdaten"}
           </button>
         </div>
 

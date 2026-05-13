@@ -1,5 +1,7 @@
+import crypto from 'crypto';
 import { prisma } from '../../lib/prisma';
 import { sendClientWelcomeEmail } from '../../lib/mailer';
+import { recipientEmail } from '../../lib/recipientEmail';
 
 // Remove null, undefined, or empty string values
 function cleanData(obj) {
@@ -223,19 +225,41 @@ export default async function handler(req, res) {
   // 🕓 Schedules are already created by register-user-prepayment or client-register-api
   // Do NOT delete and recreate them here — that would lose the dates and service names
 
-  // Send welcome email once at step 4 completion (prevent duplicates via welcomeEmailSent flag)
+  // Send welcome email once at step 4 completion (prevent duplicates via welcomeEmailSent flag).
+  //
+  // Password flow (F-16): generate a one-time setup token, save it on the user
+  // and link the email to /setpassword?token=… — that page is the "first-time
+  // create password" flow. It is intentionally separate from /forgot-password
+  // (which is for users who already have a password and forgot it). Previously
+  // the welcome email routed everyone through forgot-password, which read as
+  // "reset" rather than "create".
   try {
-    const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true, firstName: true, lastName: true, welcomeEmailSent: true } });
-    if (user?.email && !user.welcomeEmailSent) {
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true, requestEmail: true, firstName: true, lastName: true, anrede: true, welcomeEmailSent: true } });
+    const welcomeTo = recipientEmail(user);
+    if (welcomeTo && !user.welcomeEmailSent) {
+      const setupToken = crypto.randomBytes(32).toString("hex");
+      const setupExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+      await prisma.user.update({
+        where: { id: userId },
+        data: { resetToken: setupToken, resetTokenExpiry: setupExpiry },
+      });
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://phc.ch";
+      console.log("[save-optional-data] sending welcome email to", welcomeTo, "via", `${baseUrl}/setpassword?token=…`);
       await sendClientWelcomeEmail({
-        email: user.email,
+        email: welcomeTo,
         firstName: user.firstName ?? "",
         lastName: user.lastName ?? "",
-        passwordLink: `${process.env.NEXT_PUBLIC_BASE_URL}/forgot-password`,
+        anrede: user.anrede,
+        passwordLink: `${baseUrl}/setpassword?token=${setupToken}`,
       });
       await prisma.user.update({ where: { id: userId }, data: { welcomeEmailSent: true } });
+      console.log("[save-optional-data] welcome email dispatched to", welcomeTo);
+    } else {
+      console.log("[save-optional-data] welcome email SKIPPED — welcomeTo=", welcomeTo, " welcomeEmailSent=", user?.welcomeEmailSent);
     }
-  } catch (_) {}
+  } catch (err) {
+    console.error("[save-optional-data] welcome email FAILED:", err);
+  }
 
   return res.status(200).json({ success: true });
 }

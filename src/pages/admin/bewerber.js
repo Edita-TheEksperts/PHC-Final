@@ -135,8 +135,8 @@ export default function BewerberPage() {
     <AdminLayout>
       <div className="p-4 lg:p-6 space-y-6 max-w-[1400px] mx-auto">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Bewerber</h1>
-          <p className="text-sm text-gray-500 mt-1">{filtered.length} von {employees.length} Bewerbern</p>
+          <h1 className="text-xl font-bold text-gray-900">Kandidaten</h1>
+          <p className="text-sm text-gray-500 mt-1">{filtered.length} von {employees.length} Kandidaten</p>
         </div>
 
         {/* Status overview cards */}
@@ -218,7 +218,7 @@ export default function BewerberPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {filtered.length === 0 ? (
-                    <tr><td colSpan={6} className="px-4 py-10 text-center text-sm text-gray-400">Keine Bewerber gefunden</td></tr>
+                    <tr><td colSpan={6} className="px-4 py-10 text-center text-sm text-gray-400">Keine Kandidaten gefunden</td></tr>
                   ) : filtered.slice(0, visibleCount).map(emp => {
                     const days = daysSince(emp.createdAt);
                     const displayStatus = getDisplayStatus(emp);
@@ -228,8 +228,19 @@ export default function BewerberPage() {
                         <td className="px-4 py-3">
                           <p className="text-sm font-medium text-gray-900">{emp.firstName} {emp.lastName}</p>
                           <p className="text-xs text-gray-500">{emp.email}</p>
+                          <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-400">
+                            {emp.birthDate && <span>Geb. {formatDate(emp.birthDate)}</span>}
+                            {emp.smoker && emp.smoker.toLowerCase() !== "nein" && (
+                              <span className="text-amber-600">🚬 Raucher</span>
+                            )}
+                          </div>
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-600">{emp.city || emp.canton || "—"}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600">
+                          <p>{emp.city || "—"}</p>
+                          <p className="text-xs text-gray-400">
+                            {[emp.zipCode, emp.canton].filter(Boolean).join(" · ") || ""}
+                          </p>
+                        </td>
                         <td className="px-4 py-3">
                           <span className={`text-sm font-medium ${days > 7 ? "text-red-600" : days > 3 ? "text-amber-600" : "text-gray-700"}`}>
                             {days} Tage

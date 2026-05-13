@@ -26,6 +26,7 @@ include: {
     include: {
       schedules: true,
       services: true,
+      subServices: true,
     },
   },
 },

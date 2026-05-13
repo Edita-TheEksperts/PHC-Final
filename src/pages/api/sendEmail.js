@@ -19,8 +19,9 @@ export default async function handler(req, res) {
 
       const { name, vorname, email, region, questions } = fields;
 
-      // Validate required fields
-      if (!name || !vorname || !email || !region || !questions) {
+      // Validate required fields. `questions` is optional — Registrierung-Jobs-Form1
+      // submits without it, and rejecting those silently froze the application loop.
+      if (!name || !vorname || !email || !region) {
         return res.status(400).json({ error: 'Missing required fields' });
       }
 
@@ -61,10 +62,10 @@ export default async function handler(req, res) {
                 <td style="padding: 10px; border: 1px solid #ddd;"><strong>Region:</strong></td>
                 <td style="padding: 10px; border: 1px solid #ddd;">${region}</td>
               </tr>
-              <tr>
+              ${questions ? `<tr>
                 <td style="padding: 10px; border: 1px solid #ddd;"><strong>Fragen:</strong></td>
                 <td style="padding: 10px; border: 1px solid #ddd;">${questions}</td>
-              </tr>
+              </tr>` : ''}
             </table>
             
 

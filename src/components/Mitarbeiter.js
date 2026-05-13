@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import EmployeesOnAssignment from "../components/EmployeesOnAssignment";
 import AppointmentCalendar from "../components/AppointmentCalendar";
 import EmployeeTable from "../components/EmployeeTable";
+import { VACATION_STATUS, labelFor, colorFor } from "../lib/statusLabels";
 
 export default function MitarbeiterVerwaltungPage() {
   const [employees, setEmployees] = useState([]);
@@ -252,11 +253,8 @@ export default function MitarbeiterVerwaltungPage() {
                     </div>
                   )}
 
-                  <span className={`mt-2 inline-block text-xs px-2 py-0.5 rounded-full border font-medium
-                    ${v.status === "approved" ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                      : v.status === "declined" ? "bg-red-50 text-red-700 border-red-200"
-                      : "bg-amber-50 text-amber-700 border-amber-200"}`}>
-                    {v.status}
+                  <span className={`mt-2 inline-block text-xs px-2 py-0.5 rounded-full border font-medium ${colorFor(VACATION_STATUS, v.status)}`}>
+                    {labelFor(VACATION_STATUS, v.status)}
                   </span>
                 </li>
               ))}

@@ -3,6 +3,10 @@
     {
       "path": "/api/finances/retry-payments",
       "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/cron/interview-reminders",
+      "schedule": "0 8 * * *"
     }
   ]
 }

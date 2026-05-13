@@ -1,6 +1,8 @@
 import { prisma } from "../../lib/prisma";
 import Stripe from "stripe";
 import nodemailer from "nodemailer";
+import { recipientEmail } from "../../lib/recipientEmail";
+import { formalGreeting } from "../../lib/salutation";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -84,15 +86,15 @@ if (req.method === "GET") {
           subServiceName: subService || null,
           status: "active",
         },
-        include: { user: { select: { email: true, firstName: true, lastName: true } } },
+        include: { user: { select: { email: true, requestEmail: true, firstName: true, lastName: true, anrede: true } } },
       });
 
       try {
     await sendEmail({
-  to: newAppt.user.email,
+  to: recipientEmail(newAppt.user),
   subject: "Ihre Terminbestätigung bei Prime Home Care AG",
   html: `
-    <p>Hallo ${newAppt.user.firstName} ${newAppt.user.lastName}</p>
+    <p>${formalGreeting(newAppt.user)}</p>
 
     <p>Wir bestätigen Ihren Termin am</p>
 
@@ -155,7 +157,6 @@ if (req.method === "PUT") {
       hours: update.hours ? Number(update.hours) : undefined,
       serviceName: update.serviceName,
       subServiceName: update.subServiceName,
-      status: "modified" // ✅ DOMOSDOSHEM!
     };
 
  if (update.date) {
@@ -204,7 +205,7 @@ if (req.method === "DELETE") {
     const appt = await prisma.schedule.findUnique({
       where: { id: numericId },
       include: {
-        user: { select: { email: true, firstName: true, lastName: true } },
+        user: { select: { email: true, requestEmail: true, firstName: true, lastName: true, anrede: true } },
         transactions: true,
       },
     });
@@ -253,10 +254,12 @@ if (req.method === "DELETE") {
 
 // send cancel confirmation email
 await sendEmail({
-  to: appt.user.email,
-  subject: "Bestätigung Ihrer Stornierung",
+  to: recipientEmail(appt.user),
+  subject: refundPercent < 1
+    ? `Stornierung bestätigt – Stornogebühr ${Math.round((1 - refundPercent) * 100)}%`
+    : "Stornierung bestätigt – keine Stornogebühr",
   html: `
-    <p>Hallo ${appt.user.firstName} ${appt.user.lastName}</p>
+    <p>${formalGreeting(appt.user)}</p>
 
     <p>Ihr Termin am:</p>
 
@@ -266,7 +269,7 @@ await sendEmail({
 
     <p>um <strong>${appt.startTime}</strong> wurde erfolgreich storniert.</p>
 
-    <p>Rückerstattung: <strong>${refundPercent * 100}%</strong></p>
+    <p>Stornogebühr: <strong>${Math.round((1 - refundPercent) * 100)}%</strong>${refundPercent > 0 ? ` · Rückerstattung: <strong>${Math.round(refundPercent * 100)}%</strong>` : ""}</p>
 
     <br/>
 
@@ -415,7 +418,7 @@ async function sendTerminateEmail(customer, booking, immediate = false) {
 
   const info = await transporter.sendMail({
     from: `"Prime Home Care AG" <${process.env.SMTP_USER}>`,
-    to: customer.email,
+    to: recipientEmail(customer),
     subject: "Bestätigung Ihrer Kündigung bei Prime Home Care AG",
     html: emailText,
   });

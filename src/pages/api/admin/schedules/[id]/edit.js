@@ -1,5 +1,6 @@
 import { prisma } from "../../../../../lib/prisma";
 import { sendEmail } from "../../../../../lib/emails";
+import { recipientEmail } from "../../../../../lib/recipientEmail";
 
 export default async function handler(req, res) {
   const { id } = req.query;
@@ -48,10 +49,11 @@ export default async function handler(req, res) {
     });
 
     // 5. Notify client about reschedule
-    if (newSchedule.user?.email) {
+    const clientTo = recipientEmail(newSchedule.user);
+    if (clientTo) {
       try {
         await sendEmail({
-          to: newSchedule.user.email,
+          to: clientTo,
           subject: "Ihr Termin wurde geändert",
           html: `
 <p>Hallo ${newSchedule.user.firstName} ${newSchedule.user.lastName}</p>

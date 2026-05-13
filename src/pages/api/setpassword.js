@@ -8,7 +8,6 @@ export default async function handler(req, res) {
 
   const { token, password } = req.body;
 
-  // ✅ Kontrollet bazë
   if (!token) {
     return res
       .status(400)

@@ -12,7 +12,10 @@ export default async function handler(req, res) {
     const {
       firstName, lastName, email, password, phone,
       frequency, address, duration, firstDate,
-      postalCode, city, street,
+      postalCode, city, street, houseNumber, kanton,
+      requestFirstName, requestLastName, requestEmail, requestPhone,
+      requestStreet, requestHouseNumber, requestPostalCode, requestCity, requestKanton,
+      anrede,
       services = [], subServices = [], schedules = []
     } = form;
 
@@ -46,6 +49,18 @@ export default async function handler(req, res) {
         careStreet: street,
         carePostalCode: postalCode,
         careCity: city,
+        houseNumber,
+        kanton,
+        anrede,
+        requestFirstName,
+        requestLastName,
+        requestEmail,
+        requestPhone,
+        requestStreet,
+        requestHouseNumber,
+        requestPostalCode,
+        requestCity,
+        requestKanton,
         frequency,
         duration: parseInt(duration, 10),
         firstDate: parsedDate,
@@ -79,6 +94,11 @@ export default async function handler(req, res) {
 
     res.status(200).json({ userId: user.id });
   } catch (err) {
-    res.status(500).json({ message: "Internal error", error: err.message });
+    console.error("[register-user-prepayment] error:", err);
+    res.status(500).json({
+      message: err?.message ? `Internal error: ${err.message}` : "Internal error",
+      code: err?.code,
+      meta: err?.meta,
+    });
   }
 }
