@@ -4,7 +4,9 @@
 // AND inside the mailer as a runtime fallback — so the app keeps working even
 // if the seed hasn't been run yet on a given environment.
 //
-// Run:  node prisma/seed-email-templates.js
+// Run (locally or first-time on a new environment):
+//   npm run seed:emails        ← preferred
+//   node prisma/seed-email-templates.js   ← equivalent
 //
 // Re-running is safe: rows are upserted by `name`. We DO NOT overwrite an
 // existing row's body/subject — once an admin has edited a template via the

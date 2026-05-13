@@ -29,8 +29,12 @@ export default function RegisterPage() {
     setLoading(false);
 
     if (res.ok) {
-      // Show confirmation message
-      setMessage("Registrierung erfolgreich! Eine E-Mail mit weiteren Anweisungen wurde versendet.");
+      // F-07: customers book ("Buchung"), applicants apply ("Bewerbung").
+      // The old generic "Registrierung erfolgreich!" was wrong on both sides.
+      const successText = role === "client"
+        ? "Buchung erfolgreich! Eine E-Mail mit weiteren Anweisungen wurde versendet."
+        : "Bewerbung erfolgreich! Eine E-Mail mit weiteren Anweisungen wurde versendet.";
+      setMessage(successText);
 
       // Redirect to homepage after 3 seconds
       setTimeout(() => {

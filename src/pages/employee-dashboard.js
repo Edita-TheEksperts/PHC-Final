@@ -109,17 +109,25 @@ export default function EmployeeDashboard() {
         .catch(() => {});
     }
 
-    // F-36: when the dashboard tab regains focus, refetch assignments so a
-    // new admin-side Anfrage shows up without the employee having to log
-    // out and back in. Lightweight SWR-equivalent without the dependency.
+    // F-36: keep the dashboard in sync without a re-login. Lightweight
+    // SWR-equivalent without the dependency:
+    //   - refetch on tab focus / visibility change
+    //   - 60s polling while the tab stays open (skipped when hidden so
+    //     background tabs don't hammer the API)
     const onVisible = () => {
       if (document.visibilityState === "visible") {
         reloadAssignments(employeeData.email);
       }
     };
+    const pollId = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        reloadAssignments(employeeData.email);
+      }
+    }, 60_000);
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("focus", onVisible);
     return () => {
+      clearInterval(pollId);
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("focus", onVisible);
     };

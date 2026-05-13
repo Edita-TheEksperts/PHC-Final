@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate",
+    "seed:emails": "node prisma/seed-email-templates.js",
     "test:assignment-reminder": "node test-assignment-reminders.js"
   },
   "prisma": {

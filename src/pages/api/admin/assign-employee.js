@@ -48,6 +48,33 @@ export default async function handler(req, res) {
       }
     }
 
+    // F-13 / F-18: idempotency guard. If the admin double-clicks "Zuweisen"
+    // (or React replays the submit), we'd previously create two Assignment
+    // rows and send the request email twice. Guard by (userId, employeeId,
+    // scheduleId) — a given employee should never be requested twice for the
+    // same appointment. Short-circuit and return the existing row.
+    const existing = await prisma.assignment.findFirst({
+      where: {
+        userId,
+        employeeId,
+        scheduleId: appointment?.id ?? null,
+      },
+      include: { user: true, employee: true },
+    });
+    if (existing) {
+      return res.status(200).json({
+        message: "Anfrage wurde bereits gesendet.",
+        warning: null,
+        schedule: appointment
+          ? await prisma.schedule.findUnique({
+              where: { id: appointment.id },
+              include: { employee: true, user: true },
+            })
+          : null,
+        deduplicated: true,
+      });
+    }
+
     const assignment = await prisma.assignment.create({
       data: {
         userId,

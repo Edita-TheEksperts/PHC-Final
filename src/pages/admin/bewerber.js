@@ -33,7 +33,10 @@ function getDisplayStatus(emp) {
   return "pending";
 }
 
-export default function BewerberPage() {
+// F-44: the route file is still bewerber.js for backwards compatibility
+// (existing admin bookmarks and the AdminLayout link), but the component
+// name and user-facing label both use "Kandidaten".
+export default function KandidatenPage() {
   const router = useRouter();
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
