@@ -22,3 +22,7 @@ screenshots/*.jpg
 
 # Generated QA documentation (regenerate locally with build_test_doc.py)
 PHC_Test_Dokumentation*.docx
+
+# Python bytecode from the docx builder
+__pycache__/
+*.pyc

@@ -45,6 +45,17 @@ const [errors, setErrors] = useState({});
       setShowReferralModal(true);
     }
   }, [step]);
+
+  // Default availabilityFrom to "today" client-side only, so the SSR-rendered
+  // HTML matches the first client render (both empty). The field is editable
+  // by the applicant — this just pre-fills a sensible value.
+  useEffect(() => {
+    setForm((prev) =>
+      prev.availabilityFrom
+        ? prev
+        : { ...prev, availabilityFrom: new Date().toISOString().split("T")[0] }
+    );
+  }, []);
 // 👇 Scroll function before return
 const scrollToTop = () => {
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -85,7 +96,11 @@ const scrollToTop = () => {
     worksWithAnimals: "",
     desiredWeeklyHours: [],
     howFarCanYouTravel: "",
-    availabilityFrom: typeof window !== "undefined" ? new Date().toISOString().split("T")[0] : "",
+    // Empty string on both server and client. The current date is filled in
+    // by a client-only useEffect below to avoid the SSR/CSR hydration
+    // mismatch we used to get on the SummaryRow ("—" on server, "2026-05-20"
+    // on client) — see Next.js hydration-error docs.
+    availabilityFrom: "",
     availabilityDays: [],
     servicesOffered: [],
     selectedSubservices: {},

@@ -2,15 +2,17 @@
 // prisma/seed-test-users.js writes to the DB. If you change one, change both.
 module.exports = {
   admin: {
-    email: "qa-admin@phc.local",
+    email: "admin@phc.local",
     password: "TestAdmin2026!",
   },
   client: {
-    email: "qa-client@phc.local",
-    password: "TestClient2026!",
+    email: "edita.latifi@the-eksperts.com",
+    password: "TestEdita2026!",
   },
   employee: {
-    email: "qa-employee@phc.local",
-    password: "TestEmployee2026!",
+    // Internal address — see seed-test-users.js note. Display name is still
+    // "Fisnik Salihu" so screenshots show Fisnik.
+    email: "fisnik.test@phc.local",
+    password: "TestFisnik2026!",
   },
 };
