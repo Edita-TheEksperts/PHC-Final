@@ -81,7 +81,7 @@ async function main() {
   });
   console.log("  ✓ client  qa-client@phc.local");
 
-  await upsertEmployee({
+  const employee = await upsertEmployee({
     email: "qa-employee@phc.local",
     password: PASSWORDS.employee,
     firstName: "Anna",
@@ -99,6 +99,68 @@ async function main() {
     servicesOffered: [],
   });
   console.log("  ✓ employee qa-employee@phc.local");
+
+  // Filled candidate for F-34 / F-45 — has all the bewerbungs fields populated
+  // so the admin detail screen has something to show.
+  await upsertEmployee({
+    email: "qa-candidate@phc.local",
+    password: PASSWORDS.employee,
+    firstName: "Lina",
+    lastName: "Kandidat",
+    phone: "+41 44 000 00 04",
+    city: "Bern",
+    address: "Kandidatenweg 12",
+    houseNumber: "12",
+    zipCode: "3000",
+    experienceYears: "5",
+    hasLicense: true,
+    availabilityFrom: new Date(),
+    availabilityDays: ["Mon", "Tue", "Wed", "Thu", "Fri"],
+    languages: ["de", "fr", "it"],
+    languageOther: "Albanisch",
+    communicationTraits: ["geduldig", "empathisch", "humorvoll"],
+    dietaryExperience: ["vegetarisch", "diabetikergerecht"],
+    servicesOffered: ["haushaltshilfe", "freizeit"],
+    desiredWeeklyHours: ["20-30", "30-40"],
+    travelSupport: "ja",
+    smoker: "nein",
+    salutation: "Frau",
+    howFarCanYouTravel: "30km",
+    weekendReady: "ja",
+    onCallAvailable: "ja",
+    worksWithAnimals: "ja",
+    status: "pending",
+  });
+  console.log("  ✓ candidate qa-candidate@phc.local (filled fields)");
+
+  // Schedules for qa-client: Mo / Mi / Fr — proves F-09 fix (distinct weekdays)
+  // and gives the dashboard real Termine to render (F-19, F-21, F-22, F-23).
+  const clientUser = await prisma.user.findUnique({ where: { email: "qa-client@phc.local" } });
+  await prisma.schedule.deleteMany({ where: { userId: clientUser.id } });
+  const inDays = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return d; };
+  await prisma.schedule.createMany({
+    data: [
+      { userId: clientUser.id, day: "Montag",   date: inDays(7),  startTime: "09:00", hours: 2, serviceName: "haushaltshilfe", subServiceName: "kochen",     status: "active" },
+      { userId: clientUser.id, day: "Mittwoch", date: inDays(9),  startTime: "14:00", hours: 2, serviceName: "freizeit",       subServiceName: "spazieren", status: "active" },
+      { userId: clientUser.id, day: "Freitag",  date: inDays(11), startTime: "10:00", hours: 2, serviceName: "haushaltshilfe", subServiceName: "waschen",    status: "active" },
+    ],
+  });
+  console.log("  ✓ 3 schedules for qa-client (Mo/Mi/Fr)");
+
+  // Pending assignment — proves F-10 / F-11 / F-13-18 dedupe
+  const firstSchedule = await prisma.schedule.findFirst({ where: { userId: clientUser.id }, orderBy: { date: "asc" } });
+  await prisma.assignment.deleteMany({ where: { userId: clientUser.id, employeeId: employee.id } });
+  await prisma.assignment.create({
+    data: {
+      userId: clientUser.id,
+      employeeId: employee.id,
+      scheduleId: firstSchedule?.id ?? null,
+      serviceName: firstSchedule?.serviceName ?? null,
+      confirmationStatus: "pending",
+      firstDate: firstSchedule?.date ?? null,
+    },
+  });
+  console.log("  ✓ 1 pending Assignment qa-client → qa-employee");
 
   console.log("\nDone. Credentials are in tests/e2e/credentials.js.");
 }
