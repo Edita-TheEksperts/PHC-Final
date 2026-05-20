@@ -104,7 +104,7 @@ def add_steps(doc, steps):
         p.add_run(s)
 
 
-def add_item(doc, num, title, prio, problem, change, where_to_test, expected, screenshot_caption):
+def add_item(doc, num, title, prio, problem, change, where_to_test, expected, screenshot_caption, omit_screenshot_section=False):
     # Heading
     h = doc.add_heading(f"{num} — {title}", level=2)
     for run in h.runs:
@@ -134,10 +134,13 @@ def add_item(doc, num, title, prio, problem, change, where_to_test, expected, sc
     doc.add_heading("Wo und wie testen?", level=3)
     add_steps(doc, where_to_test)
 
-    # Screenshot — embed if Playwright captured one, otherwise placeholder
-    doc.add_heading("Screenshot", level=3)
+    # Screenshot — embed if Playwright captured one, otherwise placeholder.
+    # Items that are inherently outside the browser (e-mail inbox, cron logs)
+    # pass omit_screenshot_section=True so the heading + box are skipped
+    # entirely — the test steps already say where to look.
     shots = find_screenshots(num)
     if shots:
+        doc.add_heading("Screenshot", level=3)
         for path in shots:
             p = doc.add_paragraph()
             p.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -149,7 +152,8 @@ def add_item(doc, num, title, prio, problem, change, where_to_test, expected, sc
             cap_run.italic = True
             cap_run.font.size = Pt(9)
             cap_run.font.color.rgb = RGBColor(0x6B, 0x72, 0x80)
-    else:
+    elif not omit_screenshot_section:
+        doc.add_heading("Screenshot", level=3)
         screenshot_placeholder(doc, screenshot_caption)
 
     # Expected
@@ -320,6 +324,7 @@ add_item(
         "Empfänger-Adresse im Postfach des Auftraggebers (z. B. Gmail-Detailansicht mit "
         "sichtbarem 'An:'-Feld)."
     ),
+    omit_screenshot_section=True,
 )
 
 add_item(
@@ -1211,6 +1216,7 @@ add_item(
     ],
     expected="Reminder kommt an Tag 2. Auto-Reject an Tag 30.",
     screenshot_caption="Cron-Log + zugehörige E-Mail im Postfach.",
+    omit_screenshot_section=True,
 )
 
 add_item(
