@@ -12,3 +12,13 @@ node_modules
 
  
 .vercel
+
+# Playwright screenshot artefacts and reports
+test-results/
+playwright-report/
+screenshots/*.png
+screenshots/*.jpg
+!screenshots/.gitkeep
+
+# Generated QA documentation (regenerate locally with build_test_doc.py)
+PHC_Test_Dokumentation*.docx

@@ -9,6 +9,9 @@
     "lint": "next lint",
     "postinstall": "prisma generate",
     "seed:emails": "node prisma/seed-email-templates.js",
+    "seed:test-users": "node prisma/seed-test-users.js",
+    "screenshots": "playwright test",
+    "screenshots:doc": "python build_test_doc.py",
     "test:assignment-reminder": "node test-assignment-reminders.js"
   },
   "prisma": {
@@ -62,6 +65,7 @@
     "swr": "^2.3.6"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@types/formidable": "^3.4.5",
     "@types/jsonwebtoken": "^9.0.9",
     "@types/lodash": "^4.17.20",
