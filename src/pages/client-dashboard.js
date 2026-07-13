@@ -1118,11 +1118,16 @@ await fetchAppointments(userId);
                                 const matchedAssignment = (clientDetails?.assignments || []).find(
                                   a => a.status === "active" && (a.scheduleId == null || a.scheduleId === appt.id)
                                 );
-                                const isConfirmed = !!appt.employee || matchedAssignment?.confirmationStatus === "confirmed";
-                                const isAssigned = !isConfirmed && (!!matchedAssignment || (clientDetails?.assignments || []).some(
+                                // A7: this appointment was released by the primary MA — a replacement
+                                // is being organised. Takes precedence over the series' confirmed state.
+                                const isReleased = appt.status === "ersatz_noetig";
+                                const isConfirmed = !isReleased && (!!appt.employee || matchedAssignment?.confirmationStatus === "confirmed");
+                                const isAssigned = !isReleased && !isConfirmed && (!!matchedAssignment || (clientDetails?.assignments || []).some(
                                   a => a.status === "active" && (a.scheduleId == null || a.scheduleId === appt.id)
                                 ));
-                                const cfg = isConfirmed
+                                const cfg = isReleased
+                                  ? { label: "Ersatz nötig", style: "bg-amber-50 text-amber-700 border-amber-200" }
+                                  : isConfirmed
                                   ? { label: "bestätigt", style: "bg-emerald-50 text-emerald-700 border-emerald-200" }
                                   : isAssigned
                                     ? { label: "zugewiesen", style: "bg-blue-50 text-blue-700 border-blue-200" }

@@ -42,6 +42,8 @@ export const SCHEDULE_STATUS = {
   zugewiesen: { label: "Zugewiesen",            color: COLOR_BLUE },
   active:     { label: "Aktiv",                 color: COLOR_BLUE },
   confirmed:  { label: "Bestätigt",             color: COLOR_GREEN },
+  ersatz_noetig: { label: "Ersatz nötig",       color: COLOR_AMBER },
+  ersatz_bestaetigt: { label: "Ersatz bestätigt", color: COLOR_GREEN },
   done:       { label: "Erledigt",              color: COLOR_GREEN },
   cancelled:  { label: "Storniert",             color: COLOR_RED },
   canceled:   { label: "Storniert",             color: COLOR_RED },

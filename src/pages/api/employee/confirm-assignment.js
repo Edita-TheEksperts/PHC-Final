@@ -55,6 +55,19 @@ export default async function handler(req, res) {
       },
     });
 
+    // A7: a series assignment (scheduleId == null) covers the whole client series.
+    // On acceptance, stamp this employee onto ALL of the client's future,
+    // still-unassigned active schedules (single/replacement assignments already
+    // had their one schedule stamped at request time).
+    if (action === "confirmed" && updated.scheduleId == null) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      await prisma.schedule.updateMany({
+        where: { userId: updated.userId, status: "active", date: { gte: today }, employeeId: null },
+        data: { employeeId: updated.employeeId },
+      }).catch(() => {});
+    }
+
     // Only send emails if not already confirmed (prevent duplicates)
     if (action === "confirmed" && existing?.confirmationStatus !== "confirmed") {
       try {
@@ -79,10 +92,19 @@ export default async function handler(req, res) {
     }
 
     if (action === "rejected") {
-      // Clear employeeId from Schedule so a new employee can be assigned
+      // Clear employeeId so a new employee can be assigned.
       if (updated.scheduleId) {
+        // Single/replacement: release just that one appointment.
         await prisma.schedule.update({
           where: { id: updated.scheduleId },
+          data: { employeeId: null },
+        }).catch(() => {});
+      } else {
+        // A7: series rejection releases the whole future series back to unassigned.
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        await prisma.schedule.updateMany({
+          where: { userId: updated.userId, employeeId: updated.employeeId, status: "active", date: { gte: today } },
           data: { employeeId: null },
         }).catch(() => {});
       }

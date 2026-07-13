@@ -8,10 +8,29 @@ const STATUS_CONFIG = {
   noSchedule: { label: "Kein Termin",   dot: "bg-orange-400", badge: "bg-orange-50 text-orange-600 border-orange-200" },
 };
 
-export default function AssignmentsList({ confirmedAssignments = [], onUpdate }) {
+export default function AssignmentsList({ confirmedAssignments = [], onUpdate, employeeEmail }) {
   const today = new Date();
   const [updates, setUpdates] = useState({});
   const [detailsOpen, setDetailsOpen] = useState(null);
+
+  // A7: report absence for a single appointment of a series. Releases just that
+  // date ("Ersatz nötig") — the rest of the series stays with this employee.
+  const handleAbsence = async (s) => {
+    if (!s.scheduleId) return;
+    if (!window.confirm("Diesen einzelnen Termin wegen Abwesenheit freigeben? Ein Ersatz wird organisiert; Ihre übrige Serie bleibt bestehen.")) return;
+    try {
+      const res = await fetch("/api/employee/release-schedule", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: employeeEmail, scheduleId: s.scheduleId }),
+      });
+      if (!res.ok) throw new Error();
+      alert("Termin freigegeben. Ein Ersatz wird organisiert.");
+      if (onUpdate) onUpdate();
+    } catch {
+      alert("Fehler beim Freigeben des Termins.");
+    }
+  };
 
   const handleCancel = async (s) => {
     if (!window.confirm("Sind Sie sicher, dass Sie diesen Einsatz stornieren möchten?")) return;
@@ -215,10 +234,18 @@ export default function AssignmentsList({ confirmedAssignments = [], onUpdate })
         )}
 
         {(s.status === "inProgress" || s.status === "future") && (
-          <div className="pt-1 border-t border-gray-100">
+          <div className="pt-1 border-t border-gray-100 grid grid-cols-2 gap-2">
+            {s.scheduleId && (
+              <button
+                onClick={() => handleAbsence(s)}
+                className="w-full py-2 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 text-sm font-medium rounded-lg transition"
+              >
+                Absenz melden
+              </button>
+            )}
             <button
               onClick={() => handleCancel(s)}
-              className="w-full py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-sm font-medium rounded-lg transition"
+              className={`w-full py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-sm font-medium rounded-lg transition ${s.scheduleId ? "" : "col-span-2"}`}
             >
               Stornieren
             </button>
