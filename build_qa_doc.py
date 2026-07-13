@@ -36,14 +36,14 @@ MANUAL_REASONS = {
     "28_storno_mail": "E-Mail — echter Posteingang nötig.",
     "31_kuendigung_frei": "Vertrag >30 Tage in der DB nötig — live aufnehmen.",
     "37_anfrage": "Sendet echte Anfrage (mutiert Daten) — live aufnehmen.",
-    "38-39_serie_annahme": "A7 Serien-Verhalten — noch nicht gebaut (separater Build).",
-    "38b_serie_mail": "A7 + E-Mail — nach A7-Build und mit Posteingang.",
-    "40_kunde_serie": "A7 Serien-Verhalten — nach A7-Build.",
-    "41_serie_abgelehnt": "A7 Serien-Verhalten — nach A7-Build.",
+    "38-39_serie_annahme": "A7 gebaut & getestet — Live-Screenshot beim Abnahme-Durchlauf.",
+    "38b_serie_mail": "A7 gebaut — E-Mail mit Serienzeile im Posteingang aufnehmen.",
+    "40_kunde_serie": "A7 gebaut — Kunden-Dashboard nach Annahme live aufnehmen.",
+    "41_serie_abgelehnt": "A7 gebaut — Gegentest (Ablehnung) live aufnehmen.",
     "42_kein_match": "Kunde ohne passenden MA nötig — live aufnehmen.",
-    "43_absenz_meldung": "A7 Ersatz-Flow — nach A7-Build.",
-    "44_ersatz_matching": "A7 Ersatz-Flow — nach A7-Build.",
-    "45_ersatz_bestaetigt": "A7 Ersatz-Flow — nach A7-Build.",
+    "43_absenz_meldung": "A7 gebaut — «Absenz melden» im MA-Dashboard live aufnehmen.",
+    "44_ersatz_matching": "A7 gebaut — freigegebener Termin im Admin live aufnehmen.",
+    "45_ersatz_bestaetigt": "A7 gebaut — Ersatz-Bestätigung live aufnehmen.",
     "46_urlaub_matching": "MA-Urlaub über den Zeitraum nötig — live aufnehmen.",
     "57_kunde_urlaub": "Kunden-Urlaub mutiert Daten — live aufnehmen.",
     "58_ma_urlaub": "MA-Urlaubsantrag mutiert Daten — live aufnehmen.",
@@ -317,36 +317,50 @@ def teil_a(doc):
         r.font.color.rgb = GREY; r.font.size = Pt(9)
         sep = doc.add_paragraph(); hr(sep)
 
-    # A7 — concept
-    h(doc, "A7 — Serien-Zuweisung & Ersatzregelung (Konzept / Plan — separater Build)", 2)
+    # A7 — implemented
+    h(doc, "A7 — Serien-Zuweisung & Ersatzregelung", 2)
     b = doc.add_paragraph()
-    r = b.add_run("Priorität: P0 — KONZEPT     Status: Entschieden, Umsetzung geplant")
-    r.bold = True; r.font.size = Pt(10); r.font.color.rgb = RED
-    h(doc, "Entscheid", 3)
-    doc.add_paragraph("Serie ist Standard: Weist der Admin einen Mitarbeiter zu, gilt die Anfrage für die "
-                      "GANZE Serie des Kunden (alle zukünftigen Termine dieser Buchung).")
-    h(doc, "Ist-Zustand (verifiziert)", 3)
+    r = b.add_run("Priorität: P0 — DESIGN + BUILD     Status: Erledigt (gebaut, getestet, dokumentiert, gemergt)")
+    r.bold = True; r.font.size = Pt(10); r.font.color.rgb = NAVY
+    h(doc, "Was war das Problem?", 3)
     doc.add_paragraph(
-        "Heute gilt Anfrage/Annahme nur für EINEN Termin: assign-employee.js erzeugt das Assignment mit "
-        "scheduleId = genau ein Schedule. Gleichzeitig existiert ein widersprüchlicher Pfad: Assignments "
-        "mit scheduleId = null werden im Kunden-Dashboard als «gilt für ALLE Termine» interpretiert "
-        "(client-dashboard.js). Doppel-Modell ohne klare Regel und ohne Ersatzlogik.")
-    h(doc, "Zielbild", 3)
+        "Anfrage/Annahme galt nur für EINEN Termin (assign-employee.js: Assignment mit scheduleId = genau "
+        "ein Schedule). Bei einer Mo/Mi/Fr-Serie hätte der Admin jeden Termin einzeln anfragen und der "
+        "Mitarbeiter jeden einzeln annehmen müssen. Zusätzlich ein widersprüchlicher Pfad (scheduleId=null "
+        "= «alle Termine») ohne klare Regel und ohne Ersatzlogik.")
+    h(doc, "Entscheid & Umsetzung", 3)
+    doc.add_paragraph("Serie ist Standard — umgesetzt OHNE Schema-Migration über die Konvention "
+                      "«Assignment.scheduleId = null = Serien-Zuweisung».")
     for step in [
-        "Serien-Anfrage: Assignment auf Buchungs-/Serienebene (scheduleId=null konsequent als Serie oder "
-        "neues Feld seriesId); bei Annahme erhalten ALLE zukünftigen Schedules des Kunden die employeeId.",
-        "Klare Kommunikation: Anfrage-Mail & MA-Dashboard benennen die Serie («Mo/Mi/Fr, je 2 Std, ab …»).",
-        "Absenz pro Termin: Stamm-MA kann EINZELNE Termine freigeben (employeeId=null, «Ersatz nötig»), "
-        "die Serie bleibt beim Stamm-MA.",
-        "Ersatzregelung: freigegebene Termine mit Badge «Ersatz nötig»; Matching schlägt Ersatz NUR für "
-        "diesen Termin vor; Kunde wird per Mail informiert.",
+        "Serien-Anfrage: Admin weist zu → eine Serien-Zuweisung (scheduleId=null, pending); die Anfrage-Mail "
+        "und das MA-Dashboard benennen die Serie ({{seriesDescription}} → «Mo/Mi/Fr, je 2 Std, ab 21.07.2026»). "
+        "Einzel-Zuweisung bleibt für Ersatz/Einmalbuchung.",
+        "Annahme: alle zukünftigen, noch unbesetzten Termine des Kunden erhalten die employeeId "
+        "(confirm-assignment.js). Ablehnung der Serie gibt alle wieder frei.",
+        "Absenz pro Termin: Stamm-MA gibt über «Absenz melden» EINEN Termin frei (employeeId=null, Status "
+        "«ersatz_noetig») — die Serie bleibt beim Stamm-MA (release-schedule.js).",
+        "Ersatzregelung: freigegebene Termine erscheinen im Admin («Offene Zuweisungen»); der Admin weist dort "
+        "einen Ersatz nur für diesen Termin zu (Einzel-Zuweisung). Kunde sieht am Datum den Ersatz, sonst den Stamm-MA.",
         "Statuslogik: Serie angefragt → bestätigt → aktiv (bzw. abgelehnt → neu vergeben); Einzeltermin "
-        "geplant → Ersatz nötig → Ersatz bestätigt. Alle Labels DEUTSCH.",
-        "Dokumentationspflicht: dieses Verhalten schriftlich in der PHC-Prozess-Doku festhalten.",
+        "geplant → «Ersatz nötig» → Ersatz bestätigt. Alle Labels DEUTSCH.",
+        "Dokumentationspflicht erfüllt: A7_SERIEN-ZUWEISUNG_PROZESS.md (für Bettina & Silvain).",
     ]:
         doc.add_paragraph(step, style="List Number")
-    doc.add_paragraph("Die Testfälle zu Serie/Absenz/Ersatz (Prozesse 7 & 8) sind in Teil B als "
-                      "«pending A7» markiert.")
+    fp = doc.add_paragraph(); fp.add_run("Betroffene Dateien: ").bold = True
+    fp.add_run("src/lib/series.js, api/admin/assign-employee.js, api/employee/confirm-assignment.js, "
+               "api/employee/release-schedule.js, api/employee/pending-assignments.js, api/einsaetze/index.js, "
+               "components/AssignmentList.js, employee-dashboard.js, client-dashboard.js, lib/statusLabels.js, "
+               "prisma/seed-email-templates.js").font.size = Pt(9)
+    h(doc, "Verifikation (Integrationstest)", 3)
+    doc.add_paragraph(
+        "prisma/a7-series-test.js — isolierter Test-Kunde, echte Mitarbeiter, Cleanup am Ende. Geprüft: "
+        "(1) Serien-Zuweisung erzeugt scheduleId=null und stempelt Termine NICHT vor Annahme; (2) Annahme "
+        "propagiert auf alle 3 Termine; (3) Absenz gibt nur einen Termin frei (ersatz_noetig), Rest bleibt; "
+        "(4) Ersatz-Einzelzuweisung setzt den Ersatz; (5) Serien-Ablehnung gibt alle frei. "
+        "Alle 9 Prüfungen bestanden.")
+    res = doc.add_paragraph()
+    r = res.add_run("Ergebnis (Abnahme): ______  (OK / Fehler · Datum · Kürzel)")
+    r.font.color.rgb = GREY; r.font.size = Pt(9)
     doc.add_page_break()
 
 
