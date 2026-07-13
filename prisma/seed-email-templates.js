@@ -112,6 +112,7 @@ const templates = [
         <p>{{greeting}}</p>
         <p>Sie haben einen neuen Einsatz für den Kunden
           <strong>{{clientFirstName}} {{clientLastName}}</strong>.</p>
+        <p><strong>Serie:</strong> {{seriesDescription}}</p>
         <p>Um den Einsatz anzunehmen oder abzulehnen, melden Sie sich bitte im Mitarbeiter-Dashboard an:</p>
         <p>
           <a href="{{dashboardUrl}}"

@@ -24,9 +24,10 @@ export default async function handler(req, res) {
       },
     });
 
-    // ▌2. ACTIVE SCHEDULES
+    // ▌2. ACTIVE SCHEDULES (A7: include "ersatz_noetig" so released appointments
+    // stay visible to the admin until a replacement is assigned)
     const aktive = schedules.filter(
-      (s) => s.status === "active" && s.date && new Date(s.date) >= now
+      (s) => (s.status === "active" || s.status === "ersatz_noetig") && s.date && new Date(s.date) >= now
     );
 
     // ▌3. PAST SCHEDULES (Vergangene)
@@ -40,11 +41,12 @@ export default async function handler(req, res) {
       (s) => s.status === "changed" || s.status === "modified"
     );
 
-    // ▌7. OPEN ASSIGNMENTS (employeeId missing)
+    // ▌7. OPEN ASSIGNMENTS (employeeId missing) — A7: also surface schedules
+    // released for replacement ("ersatz_noetig") so the admin can re-match them.
     const offeneZuweisungen = await prisma.schedule.findMany({
       where: {
         employeeId: null,
-        status: "active",
+        status: { in: ["active", "ersatz_noetig"] },
       },
       include: {
         user: {

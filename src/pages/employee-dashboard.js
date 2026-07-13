@@ -434,7 +434,10 @@ export default function EmployeeDashboard() {
                       <div key={a.id} className="border border-gray-200 rounded-xl p-5 space-y-4">
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <p className="font-semibold text-gray-900">Neuer Einsatz</p>
+                            <p className="font-semibold text-gray-900">{a.isSeries ? "Neue Einsatz-Serie" : "Neuer Einsatz"}</p>
+                            {a.isSeries && a.seriesDescription && (
+                              <p className="text-xs font-medium text-[#04436F] mt-0.5">Serie: {a.seriesDescription}</p>
+                            )}
                             <p className="text-sm text-gray-500">{a.user?.services?.map(s => s.name).join(", ") || "—"}</p>
                           </div>
                           <span className="flex-shrink-0 text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 rounded-full px-2.5 py-1">
@@ -570,7 +573,11 @@ export default function EmployeeDashboard() {
                         </button>
                       ))}
                     </div>
-                    <AssignmentsList confirmedAssignments={partition[einsaetzeSubTab] || []} />
+                    <AssignmentsList
+                      confirmedAssignments={partition[einsaetzeSubTab] || []}
+                      employeeEmail={employeeData?.email}
+                      onUpdate={() => reloadAssignments(employeeData?.email)}
+                    />
                   </div>
                 );
               })()}
