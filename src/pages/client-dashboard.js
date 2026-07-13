@@ -7,6 +7,7 @@ import Kundigung from "./dashboard/kundigung";
 import RegisterForm3 from "../components/RegisterForm3";
 import RegisterForm4 from "../components/RegisterForm4";
 import ClientDashboard2 from "../components/ClientDashboard2";
+import ErrorBoundary from "../components/ErrorBoundary";
 import "react-datepicker/dist/react-datepicker.css";
 import DatePicker, { registerLocale } from "react-datepicker";
 import { parseISO } from "date-fns";
@@ -52,7 +53,7 @@ ChartJS.register(
 
 registerLocale("de", de);
 
-export default function ClientDashboard() {
+function ClientDashboard() {
   const [selectedAppointment, setSelectedAppointment] = useState(null);
 
   const [userData, setUserData] = useState(null);
@@ -288,8 +289,9 @@ useEffect(() => {
   const getCancellationFeeInfo = (dateStr) => {
     if (!dateStr) return { pct: 100, refundPct: 0, label: "100% Stornogebühr", color: "text-red-600", note: "Keine Datumsangabe" };
     const days = Math.ceil((new Date(dateStr) - new Date()) / (1000 * 60 * 60 * 24));
-    if (days > 14) return { pct: 0,   refundPct: 100, label: "Kostenlose Stornierung", color: "text-green-600", note: "Mehr als 14 Tage Vorlauf → keine Stornogebühr" };
-    if (days > 7)  return { pct: 50,  refundPct: 50,  label: "50% Stornogebühr",       color: "text-amber-600", note: "7–14 Tage Vorlauf → 50% Stornogebühr" };
+    // Boundaries must match the backend (api/appointments.js): >=14 → full refund, >=7 → 50%.
+    if (days >= 14) return { pct: 0,   refundPct: 100, label: "Kostenlose Stornierung", color: "text-green-600", note: "14 Tage oder mehr Vorlauf → keine Stornogebühr" };
+    if (days >= 7)  return { pct: 50,  refundPct: 50,  label: "50% Stornogebühr",       color: "text-amber-600", note: "7–13 Tage Vorlauf → 50% Stornogebühr" };
     return           { pct: 100, refundPct: 0,   label: "100% Stornogebühr",      color: "text-red-600",   note: "Weniger als 7 Tage Vorlauf → volle Stornogebühr" };
   };
 
@@ -506,13 +508,12 @@ if (!token && step !== "done" && step !== "payment") {
         }
       );
 
-      if (error) {
-        alert(error.message);
+      if (error || !paymentIntent) {
+        alert(error?.message || "Zahlung konnte nicht bestätigt werden. Bitte versuchen Sie es erneut.");
         return;
       }
 
       // 3. Save appointment after successful payment
-      // Debug: Log the payload before sending
       const bookingPayload = {
         ...pendingBooking,
         email: userData.email,
@@ -1926,5 +1927,15 @@ await fetchAppointments(userId);
       )}
 
     </div>
+  );
+}
+
+// Wrap the dashboard in an error boundary so a single render error can never
+// brick the whole page (A1 — the "Application error" crash loop).
+export default function ClientDashboardPage() {
+  return (
+    <ErrorBoundary>
+      <ClientDashboard />
+    </ErrorBoundary>
   );
 }

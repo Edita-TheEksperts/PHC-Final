@@ -93,7 +93,7 @@ export default async function handler(req, res) {
     );
 
     const employees = await prisma.employee.findMany({
-      where: { status: "available" },
+      where: { status: { in: ["approved", "accepted", "available"] } },
       include: { vacations: true, schedules: true },
     });
 

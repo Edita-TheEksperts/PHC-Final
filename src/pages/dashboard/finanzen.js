@@ -21,6 +21,8 @@ export default function FinanzenPage() {
   const [voucherCode, setVoucherCode] = useState("");
   const [voucherResult, setVoucherResult] = useState(null);
   const [voucherLoading, setVoucherLoading] = useState(false);
+  const [receipts, setReceipts] = useState([]);
+  const [receiptsLoading, setReceiptsLoading] = useState(true);
 
   const handleVoucherSubmit = async () => {
     if (!voucherCode.trim()) return;
@@ -78,6 +80,23 @@ export default function FinanzenPage() {
   useEffect(() => {
     if (userData?.stripeCustomerId) fetchPaymentMethod();
   }, [userData]);
+
+  useEffect(() => {
+    if (!userData?.id) return;
+    const fetchReceipts = async () => {
+      setReceiptsLoading(true);
+      try {
+        const res = await fetch(`/api/client/receipts?userId=${userData.id}`);
+        const data = await res.json();
+        setReceipts(Array.isArray(data) ? data : []);
+      } catch {
+        setReceipts([]);
+      } finally {
+        setReceiptsLoading(false);
+      }
+    };
+    fetchReceipts();
+  }, [userData?.id]);
 
   const handleUpdateCard = async () => {
     if (!stripe || !elements) return;
@@ -328,6 +347,51 @@ export default function FinanzenPage() {
           </div>
 
           </div>
+
+          {/* ── MEINE ZAHLUNGEN / QUITTUNGEN (A4) ── */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100">
+              <h3 className="text-sm font-bold text-gray-900">Meine Zahlungen / Quittungen</h3>
+              <p className="text-xs text-gray-500 mt-0.5">Alle bestätigten Zahlungen mit Beleg zum Öffnen.</p>
+            </div>
+            <div className="p-6">
+              {receiptsLoading ? (
+                <div className="space-y-2">
+                  {[1, 2, 3].map((i) => <div key={i} className="h-12 bg-gray-100 rounded-xl animate-pulse" />)}
+                </div>
+              ) : receipts.length === 0 ? (
+                <div className="border-2 border-dashed border-gray-200 rounded-2xl p-8 text-center">
+                  <p className="text-sm text-gray-400 font-medium">Noch keine Zahlungen vorhanden</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-100">
+                  {receipts.map((r) => (
+                    <div key={r.id} className="flex items-center justify-between py-3">
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">
+                          {new Date(r.date).toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                        </p>
+                        <p className="text-xs text-gray-400">{r.currency} {r.amount.toFixed(2)}</p>
+                      </div>
+                      {r.receiptUrl ? (
+                        <a
+                          href={r.receiptUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-4 py-2 rounded-full bg-[#04436F] text-white text-xs font-medium hover:bg-[#B99B5F] transition"
+                        >
+                          Quittung öffnen
+                        </a>
+                      ) : (
+                        <span className="text-xs text-gray-400">Kein Beleg</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
         </div>
       </main>
 
