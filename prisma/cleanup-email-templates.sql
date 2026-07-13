@@ -1,17 +1,17 @@
 -- A6 follow-up: remove orphaned legacy e-mail templates (QA 12.07.2026).
--- These names are no longer referenced by the app; the current templates live
--- under different names and are seeded by prisma/seed-email-templates.js.
 --
--- SAFETY: run against a BACKUP first. This is a destructive delete on the
--- production EmailTemplate table. Verify the two rows exist before deleting:
+-- ✅ APPLIED 13.07.2026 via prisma/apply-email-cleanup.js against the DB:
+--    - Deleted 2 orphaned rows: assignentAccepted, welcomeEmail
+--    - Switched 6 templates from raw "Grüezi/Hallo {{firstName}}" to {{greeting}}
+--    - Result: 18 rows, 0 orphans, 0 raw greetings (verified via inspect-email-templates.js)
+--
+-- This SQL is kept for reference / re-use on another environment. Run against a
+-- BACKUP first; verify the rows exist before deleting:
 --
 --   SELECT name FROM "EmailTemplate" WHERE name IN ('assignentAccepted','welcomeEmail');
---
--- Then, once confirmed:
 
 DELETE FROM "EmailTemplate" WHERE name IN ('assignentAccepted', 'welcomeEmail');
 
--- Note: the {{greeting}} salutation change is handled in the seed
--- (prisma/seed-email-templates.js). To apply it to already-stored rows, either
--- re-run the seed (npm run seed:emails) or update the affected rows' bodies to
--- use {{greeting}} instead of "Grüezi/Hallo {{firstName}}".
+-- The {{greeting}} salutation change on already-stored rows was applied by
+-- prisma/apply-email-cleanup.js (targeted UPDATE). The seed
+-- (prisma/seed-email-templates.js) also uses {{greeting}} for new rows.
