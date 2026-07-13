@@ -1782,7 +1782,10 @@ const handlePayment = async () => {
                       <button
                         key={option}
                         type="button"
-                        onClick={() => setForm({ ...form, frequency: option })}
+                        onClick={() => {
+                          setForm({ ...form, frequency: option });
+                          setErrors((prev) => ({ ...prev, frequency: "" }));
+                        }}
                         className={`px-4 py-3 rounded-lg border text-center w-[140px] ${
                           form.frequency === option
                             ? "border-[#B99B5F] text-[#B99B5F] font-semibold"

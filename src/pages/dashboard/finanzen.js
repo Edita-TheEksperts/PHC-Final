@@ -21,6 +21,9 @@ export default function FinanzenPage() {
   const [voucherCode, setVoucherCode] = useState("");
   const [voucherResult, setVoucherResult] = useState(null);
   const [voucherLoading, setVoucherLoading] = useState(false);
+  const [receipts, setReceipts] = useState([]);
+  const [receiptsLoading, setReceiptsLoading] = useState(true);
+  const [cardMsg, setCardMsg] = useState(null); // inline card-update feedback (A6: statt alert())
 
   const handleVoucherSubmit = async () => {
     if (!voucherCode.trim()) return;
@@ -79,14 +82,32 @@ export default function FinanzenPage() {
     if (userData?.stripeCustomerId) fetchPaymentMethod();
   }, [userData]);
 
+  useEffect(() => {
+    if (!userData?.id) return;
+    const fetchReceipts = async () => {
+      setReceiptsLoading(true);
+      try {
+        const res = await fetch(`/api/client/receipts?userId=${userData.id}`);
+        const data = await res.json();
+        setReceipts(Array.isArray(data) ? data : []);
+      } catch {
+        setReceipts([]);
+      } finally {
+        setReceiptsLoading(false);
+      }
+    };
+    fetchReceipts();
+  }, [userData?.id]);
+
   const handleUpdateCard = async () => {
     if (!stripe || !elements) return;
+    setCardMsg(null);
     setCardLoading(true);
     const { paymentMethod: pm, error } = await stripe.createPaymentMethod({
       type: "card",
       card: elements.getElement(CardElement),
     });
-    if (error) { alert(error.message); setCardLoading(false); return; }
+    if (error) { setCardMsg({ type: "error", text: error.message }); setCardLoading(false); return; }
     try {
       const res = await fetch("/api/update-payment-method", {
         method: "POST",
@@ -96,14 +117,14 @@ export default function FinanzenPage() {
       const data = await res.json();
       setCardLoading(false);
       if (data.success) {
-        alert("Zahlungsmethode erfolgreich aktualisiert!");
-        setEditingCard(false);
+        setCardMsg({ type: "success", text: "Zahlungsmethode erfolgreich aktualisiert!" });
         fetchPaymentMethod();
+        setTimeout(() => { setEditingCard(false); setCardMsg(null); }, 1500);
       } else {
-        alert("Fehler beim Speichern der Zahlungsmethode.");
+        setCardMsg({ type: "error", text: "Fehler beim Speichern der Zahlungsmethode." });
       }
     } catch {
-      alert("Serverfehler bei Zahlungsupdate");
+      setCardMsg({ type: "error", text: "Serverfehler bei Zahlungsupdate." });
       setCardLoading(false);
     }
   };
@@ -328,6 +349,51 @@ export default function FinanzenPage() {
           </div>
 
           </div>
+
+          {/* ── MEINE ZAHLUNGEN / QUITTUNGEN (A4) ── */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100">
+              <h3 className="text-sm font-bold text-gray-900">Meine Zahlungen / Quittungen</h3>
+              <p className="text-xs text-gray-500 mt-0.5">Alle bestätigten Zahlungen mit Beleg zum Öffnen.</p>
+            </div>
+            <div className="p-6">
+              {receiptsLoading ? (
+                <div className="space-y-2">
+                  {[1, 2, 3].map((i) => <div key={i} className="h-12 bg-gray-100 rounded-xl animate-pulse" />)}
+                </div>
+              ) : receipts.length === 0 ? (
+                <div className="border-2 border-dashed border-gray-200 rounded-2xl p-8 text-center">
+                  <p className="text-sm text-gray-400 font-medium">Noch keine Zahlungen vorhanden</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-100">
+                  {receipts.map((r) => (
+                    <div key={r.id} className="flex items-center justify-between py-3">
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">
+                          {new Date(r.date).toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                        </p>
+                        <p className="text-xs text-gray-400">{r.currency} {r.amount.toFixed(2)}</p>
+                      </div>
+                      {r.receiptUrl ? (
+                        <a
+                          href={r.receiptUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-4 py-2 rounded-full bg-[#04436F] text-white text-xs font-medium hover:bg-[#B99B5F] transition"
+                        >
+                          Quittung öffnen
+                        </a>
+                      ) : (
+                        <span className="text-xs text-gray-400">Kein Beleg</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
         </div>
       </main>
 
@@ -344,9 +410,14 @@ export default function FinanzenPage() {
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <div className="border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 mb-5">
+            <div className="border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 mb-3">
               <CardElement />
             </div>
+            {cardMsg && (
+              <div className={`mb-4 text-sm rounded-xl px-4 py-3 border ${cardMsg.type === "success" ? "bg-green-50 border-green-200 text-green-700" : "bg-red-50 border-red-200 text-red-700"}`}>
+                {cardMsg.text}
+              </div>
+            )}
             <button
               disabled={cardLoading}
               onClick={handleUpdateCard}

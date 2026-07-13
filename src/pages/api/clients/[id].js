@@ -56,17 +56,19 @@ export default async function handler(req, res) {
   // ✅ PUT – Update client (Bearbeiten / Speichern)
   // =====================================================
   if (req.method === "PUT") {
-    // Verify JWT — user can only update their own profile (or admin)
-    const authHeader = req.headers.authorization;
-    if (!authHeader) return res.status(401).json({ message: "Unauthorized" });
-    const token = authHeader.split(" ")[1];
-    try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      if (decoded.id !== String(id) && decoded.role !== "admin") {
-        return res.status(403).json({ message: "Forbidden" });
-      }
-    } catch {
-      return res.status(401).json({ message: "Invalid token" });
+    // Verify JWT — the user may update their own profile, or an admin may update
+    // any client. Admins authenticate via the HttpOnly adminToken cookie (not a
+    // Bearer header), so accept the Bearer token first and fall back to the cookie.
+    const bearer = req.headers.authorization?.split(" ")[1];
+    const cookieToken = req.cookies?.adminToken;
+    let decoded = null;
+    for (const tok of [bearer, cookieToken]) {
+      if (!tok || tok === "null" || tok === "undefined") continue;
+      try { decoded = jwt.verify(tok, process.env.JWT_SECRET); break; } catch {}
+    }
+    if (!decoded) return res.status(401).json({ message: "Unauthorized" });
+    if (decoded.id !== String(id) && decoded.role !== "admin") {
+      return res.status(403).json({ message: "Forbidden" });
     }
 
     try {

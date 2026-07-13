@@ -28,7 +28,7 @@ export default function Einsaetze() {
     }
     setRecsLoaded(false);
     fetch(`/api/admin/matchmaking?clientId=${selectedItem.user.id}`, {
-      headers: { "Authorization": `Bearer ${localStorage.getItem("userToken")}` }
+      credentials: "include"
     })
       .then(r => r.json())
       .then(d => { setRecommendations(Array.isArray(d) ? d.slice(0, 5) : []); setRecsLoaded(true); })
@@ -103,7 +103,8 @@ export default function Einsaetze() {
     try {
       const res = await fetch(`/api/admin/schedules/${editItem.id}/edit`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem("userToken")}` },
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(editItem),
       });
       const updated = await res.json();
@@ -146,7 +147,8 @@ export default function Einsaetze() {
       };
       const res = await fetch("/api/admin/assign-employee", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem("userToken")}` },
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(payload),
       });
       const updatedSchedule = await res.json();
@@ -188,7 +190,7 @@ export default function Einsaetze() {
   useEffect(() => {
     async function fetchServices() {
       try {
-        const res = await fetch("/api/admin/services", { headers: { "Authorization": `Bearer ${localStorage.getItem("userToken")}` } });
+        const res = await fetch("/api/admin/services", { credentials: "include" });
         const data = await res.json();
         setAllServices(Array.isArray(data) ? data : []);
       } catch { setAllServices([]); }
@@ -199,7 +201,7 @@ export default function Einsaetze() {
   useEffect(() => {
     async function fetchEmployees() {
       try {
-        const res = await fetch("/api/admin/employees", { headers: { "Authorization": `Bearer ${localStorage.getItem("userToken")}` } });
+        const res = await fetch("/api/admin/employees", { credentials: "include" });
         const employees = await res.json();
         const safe = Array.isArray(employees) ? employees : [];
         setAllEmployees(safe.filter((e) => isAcceptedStatus(e.status)));

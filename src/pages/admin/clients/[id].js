@@ -12,6 +12,16 @@ import {
 } from "../../../lib/formOptions";
 
 const CLIENT_STATUSES = ["open", "aktiv", "inaktiv", "storniert", "gekuendigt"];
+// Display-only German labels — the stored value (used by /api/admin/set-status)
+// stays unchanged so nothing downstream breaks. Keeps raw tokens out of the UI.
+const CLIENT_STATUS_LABEL = {
+  open: "Offen",
+  aktiv: "Aktiv",
+  active: "Aktiv",
+  inaktiv: "Inaktiv",
+  storniert: "Storniert",
+  gekuendigt: "Gekündigt",
+};
 
 function StatusSetter({ type, id, currentStatus, onUpdated }) {
   const [status, setStatus] = useState(currentStatus);
@@ -25,10 +35,8 @@ function StatusSetter({ type, id, currentStatus, onUpdated }) {
     try {
       const res = await fetch("/api/admin/set-status", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem("userToken")}`,
-        },
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ type, id, status }),
       });
       const data = await res.json();
@@ -50,7 +58,7 @@ function StatusSetter({ type, id, currentStatus, onUpdated }) {
         className="border rounded px-2 py-1 text-sm text-gray-700"
       >
         {statuses.map((s) => (
-          <option key={s} value={s}>{s}</option>
+          <option key={s} value={s}>{CLIENT_STATUS_LABEL[s] || s}</option>
         ))}
       </select>
       <button
@@ -795,10 +803,8 @@ const InputField = memo(function InputField({ fieldKey, value }) {
     try {
       const res = await fetch(`/api/clients/${id}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem("userToken")}`,
-        },
+        headers: { "Content-Type": "application/json" },
+        credentials: "include", // admin auth via HttpOnly adminToken cookie
         body: JSON.stringify(formData),
       });
 

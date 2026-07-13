@@ -27,7 +27,7 @@ export default async function handler(req, res) {
     // ✅ This is what Stripe sends you
     res.status(200).json({
       clientSecret: paymentIntent.client_secret,     // for frontend use
-      paymentIntentId: paymentIntent.id,             // THIS is the "fucking number"
+      paymentIntentId: paymentIntent.id,             // the PaymentIntent id the frontend needs
     });
 
   } catch (error) {

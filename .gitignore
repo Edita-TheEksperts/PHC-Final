@@ -26,3 +26,4 @@ PHC_Test_Dokumentation*.docx
 # Python bytecode from the docx builder
 __pycache__/
 *.pyc
+PHC_QA-Umsetzung*.docx
