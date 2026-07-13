@@ -42,11 +42,7 @@ export default function Home() {
     {
       question: "Wer wählt die passende Betreuungskraft aus? ",
       answer: "Bei Prime Home Care unterstützt Sie ein vollautomatisches Matchingsystem: Auf Basis Ihrer Angaben schlagen wir passende Betreuungspersonen vor – schnell, digital und unkompliziert. Unser Ziel: eine harmonische und vertrauensvolle Betreuung. Eine 100 % Übereinstimmung aller Wünsche können wir jedoch nicht garantieren. So behalten Sie die Wahl und finden die Betreuungskraft, die am besten zu Ihrer Situation passt. ",
-    },
-    {
-      question: "Was unterscheidet stundenweise Betreuung von einer 24 Stunden Betreuung?",
-      answer: "Manchmal braucht es nur ein paar Stunden Hilfe pro Woche, manchmal rund um die Uhr – und genau hier liegt der Unterschied: Stundenweise Betreuung bedeutet: Unterstützung dann, wenn Sie sie brauchen. Zum Beispiel für Einkäufe, Arztbesuche, Spaziergänge oder Hilfe im Haushalt. Sie bleiben flexibel und bezahlen nur die tatsächlich geleisteten Stunden. Ideal, wenn Angehörige zwischendurch entlastet werden sollen oder Sie punktuell Unterstützung suchen. 24-Stunden-Betreuung hingegen bietet eine dauerhafte Präsenz im Zuhause. Eine Betreuungsperson lebt mit im Haushalt und ist jederzeit vor Ort – für Pflege, Gesellschaft und Sicherheit. Perfekt, wenn eine kontinuierliche Betreuung notwendig ist und Angehörige vollständig entlastet werden sollen. "
-}];
+    }];
 
   const [openIndex, setOpenIndex] = useState(null);
 
@@ -762,7 +758,6 @@ className={`w-[40px] h-[40px] lg:w-[70px] lg:h-[70px] aspect-square
           Wir bei der Prime Home Care AG verstehen die individuellen Bedürfnisse unserer Kunden.
         </p>
         <ul className="list-disc pl-5 space-y-2 text-[16px] font-normal">
-          <li>24 Stunden Live-In Betreuung</li>
           <li>Ferienbegleitung</li>
       <li>Beratungsdienstleistungen</li>
           <li>Biographiearbeit</li>
