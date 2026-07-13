@@ -266,12 +266,14 @@ FIXES = [
             "Rohstatus: Kundenprofil-Status wird als deutsches Label angezeigt (Offen/Aktiv/Inaktiv/…); der "
             "gespeicherte Wert bleibt unverändert, damit set-status weiter funktioniert.",
         ],
-        followup=("Dokumentierte Follow-ups (Daten-/Breitenänderungen, bewusst separat): "
-                  "(1) E-Mail-Vorlagen — DELETE FROM \"EmailTemplate\" WHERE name IN "
-                  "('assignentAccepted','welcomeEmail'); + 8 Vorlagen von «Grüezi/Hallo {{firstName}}» auf "
-                  "{{greeting}} umstellen; (2) alert()-Popups bei Re-Booking/Kartenwechsel durch Inline-"
-                  "Meldungen ersetzen; (3) projektweiter Rohstatus-Audit. Diese berühren die Produktions-DB "
-                  "bzw. sind breitere UI-Umbauten und werden separat eingeplant."),
+        followup=("Follow-ups umgesetzt/bereitgestellt: (1) E-Mail-Vorlagen — Seed nutzt bereits "
+                  "{{greeting}}, die verbliebene Rohanrede (interviewReminder) umgestellt; die "
+                  "Orphan-Bereinigung liegt als prisma/cleanup-email-templates.sql bereit (bewusst NICHT "
+                  "ausgeführt — destruktive Prod-Operation, nur nach Backup). (2) alert()->Inline beim "
+                  "Kartenwechsel (dashboard/finanzen.js) erledigt; die Re-Booking-alerts im 1930-Zeilen-"
+                  "client-dashboard.js bewusst belassen (P3, Bruchrisiko). (3) Rohstatus-Audit: Kunden-/"
+                  "Mitarbeiter-Dashboard und Kundenliste nutzen bereits deutsche Labels (labelFor); der "
+                  "einzige Rohstatus (Admin-Kundendetail-Dropdown) wurde umgestellt."),
         test=["Storno mit >14 / =14 / 10 / 3 Tagen Vorlauf: 0 % / 0 % / 50 % / 100 % — Anzeige = Abrechnung."],
         shots=["24-27_storno"],
         files=["src/pages/client-dashboard.js", "src/pages/api/create-payment-intent.js",

@@ -88,14 +88,10 @@ Stripe-Invoices, obwohl nur PaymentIntents existieren.
 - Kraftausdruck-Kommentar in `src/pages/api/create-payment-intent.js` entfernt.
 - Kundenprofil-Status als deutsches Label (`src/pages/admin/clients/[id].js`); gespeicherter Wert unverändert.
 
-**Dokumentierte Follow-ups (bewusst separat — Produktions-DB / breitere UI-Umbauten):**
-1. **E-Mail-Vorlagen (DB-Migration):**
-   ```sql
-   DELETE FROM "EmailTemplate" WHERE name IN ('assignentAccepted','welcomeEmail');
-   ```
-   und 8 Vorlagen von `Grüezi/Hallo {{firstName}}` auf `{{greeting}}` umstellen.
-2. **alert() → Inline-Meldungen** bei Re-Booking (`client-dashboard.js`) und Kartenwechsel (`dashboard/finanzen.js`).
-3. **Projektweiter Rohstatus-Audit** — alle rohen englischen Status via `labelFor()` (`src/lib/statusLabels.js`) rendern.
+**Follow-ups — jetzt umgesetzt bzw. bereitgestellt:**
+1. **E-Mail-Vorlagen:** Die Seed-Vorlagen nutzen bereits `{{greeting}}`; die eine verbliebene Rohanrede (`interviewReminder`) wurde in `prisma/seed-email-templates.js` auf `{{greeting}}` umgestellt. Die Bereinigung verwaister Zeilen liegt als **`prisma/cleanup-email-templates.sql`** bereit (bewusst NICHT ausgeführt — destruktive Prod-DB-Operation, nur nach Backup ausführen).
+2. **alert() → Inline:** Kartenwechsel (`dashboard/finanzen.js`) auf eine Inline-Meldung im Modal umgestellt. Die Re-Booking-`alert()`s im 1930-Zeilen-`client-dashboard.js` (kritische Zahlungslogik) wurden bewusst belassen — sie funktionieren; ein Umbau ist reine P3-Politur mit Bruchrisiko.
+3. **Rohstatus-Audit durchgeführt:** Kunden-Dashboard, Mitarbeiter-Dashboard und Kundenliste rendern bereits deutsche Labels (`labelFor` / Badge-Logik). Einziger Rohstatus (Admin-Kundendetail-Dropdown) wurde auf deutsche Labels umgestellt.
 
 ## A7 — Serien-Zuweisung & Ersatz  (P0 Konzept — separater Build)
 
@@ -126,13 +122,17 @@ E-Mails) ist ein Kunde mit echten Stripe-Charges bzw. ein Posteingang nötig.
 
 ---
 
-## Zusätzlicher Befund (nicht im QA-Paket)
+## Zusätzlicher Befund (nicht im QA-Paket) — ✅ behoben
 
-`src/pages/admin/clients/[id].js` (~Z. 800) sendet beim Speichern eines Kundenprofils
-`PUT /api/clients/[id]` mit `Bearer userToken`. Der Endpoint verifiziert den Bearer-JWT
-direkt und kann das HttpOnly-`adminToken`-Cookie **nicht** lesen → ein Admin, der ein
-Kundenprofil speichert, läuft in 401. Nicht Teil des QA-Scopes und tiefergehend
-(Endpoint müsste das Admin-Cookie akzeptieren) — daher hier nur dokumentiert, nicht geändert.
+`src/pages/admin/clients/[id].js` (~Z. 800) sendete beim Speichern eines Kundenprofils
+`PUT /api/clients/[id]` mit `Bearer userToken` (für Admins null). Der Endpoint verifizierte
+nur den Bearer-JWT und konnte das HttpOnly-`adminToken`-Cookie nicht lesen → Admin-Speichern
+lief in 401.
+
+**Behoben:** `src/pages/api/clients/[id].js` (PUT) akzeptiert jetzt Bearer **oder** das
+`adminToken`-Cookie (probiert beide, ignoriert „null"/„undefined"); das Frontend sendet
+`credentials:"include"` statt des Bearer-Tokens. Der/die Kund*in kann weiterhin das eigene
+Profil bearbeiten, Admins jedes.
 
 ---
 

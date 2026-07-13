@@ -803,10 +803,8 @@ const InputField = memo(function InputField({ fieldKey, value }) {
     try {
       const res = await fetch(`/api/clients/${id}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem("userToken")}`,
-        },
+        headers: { "Content-Type": "application/json" },
+        credentials: "include", // admin auth via HttpOnly adminToken cookie
         body: JSON.stringify(formData),
       });
 

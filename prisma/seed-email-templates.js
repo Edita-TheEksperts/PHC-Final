@@ -162,7 +162,7 @@ const templates = [
     subject: "Erinnerung – Ihr Interview-Termin bei Prime Home Care AG",
     body: `
       <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-        <p>Hallo {{firstName}},</p>
+        <p>{{greeting}}</p>
         <p>Wir haben Ihnen vor zwei Tagen eine Einladung zum Interview gesendet, aber noch
         keine Buchung erhalten.</p>
         <p>Bitte wählen Sie einen passenden Termin, damit wir den Bewerbungsprozess

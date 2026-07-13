@@ -23,6 +23,7 @@ export default function FinanzenPage() {
   const [voucherLoading, setVoucherLoading] = useState(false);
   const [receipts, setReceipts] = useState([]);
   const [receiptsLoading, setReceiptsLoading] = useState(true);
+  const [cardMsg, setCardMsg] = useState(null); // inline card-update feedback (A6: statt alert())
 
   const handleVoucherSubmit = async () => {
     if (!voucherCode.trim()) return;
@@ -100,12 +101,13 @@ export default function FinanzenPage() {
 
   const handleUpdateCard = async () => {
     if (!stripe || !elements) return;
+    setCardMsg(null);
     setCardLoading(true);
     const { paymentMethod: pm, error } = await stripe.createPaymentMethod({
       type: "card",
       card: elements.getElement(CardElement),
     });
-    if (error) { alert(error.message); setCardLoading(false); return; }
+    if (error) { setCardMsg({ type: "error", text: error.message }); setCardLoading(false); return; }
     try {
       const res = await fetch("/api/update-payment-method", {
         method: "POST",
@@ -115,14 +117,14 @@ export default function FinanzenPage() {
       const data = await res.json();
       setCardLoading(false);
       if (data.success) {
-        alert("Zahlungsmethode erfolgreich aktualisiert!");
-        setEditingCard(false);
+        setCardMsg({ type: "success", text: "Zahlungsmethode erfolgreich aktualisiert!" });
         fetchPaymentMethod();
+        setTimeout(() => { setEditingCard(false); setCardMsg(null); }, 1500);
       } else {
-        alert("Fehler beim Speichern der Zahlungsmethode.");
+        setCardMsg({ type: "error", text: "Fehler beim Speichern der Zahlungsmethode." });
       }
     } catch {
-      alert("Serverfehler bei Zahlungsupdate");
+      setCardMsg({ type: "error", text: "Serverfehler bei Zahlungsupdate." });
       setCardLoading(false);
     }
   };
@@ -408,9 +410,14 @@ export default function FinanzenPage() {
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <div className="border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 mb-5">
+            <div className="border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 mb-3">
               <CardElement />
             </div>
+            {cardMsg && (
+              <div className={`mb-4 text-sm rounded-xl px-4 py-3 border ${cardMsg.type === "success" ? "bg-green-50 border-green-200 text-green-700" : "bg-red-50 border-red-200 text-red-700"}`}>
+                {cardMsg.text}
+              </div>
+            )}
             <button
               disabled={cardLoading}
               onClick={handleUpdateCard}
