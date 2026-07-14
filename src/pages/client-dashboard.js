@@ -484,8 +484,10 @@ if (!token && step !== "done" && step !== "payment") {
   const elements = useElements();
   const [agbAccepted, setAgbAccepted] = useState(false);
   const [agbError, setAgbError] = useState("");
+  const [bookingMsg, setBookingMsg] = useState(null); // A6: inline statt alert()
 
   const handleStripePayment = async () => {
+    setBookingMsg(null);
     if (!agbAccepted) {
       setAgbError("Bitte AGB akzeptieren.");
       return;
@@ -509,7 +511,7 @@ if (!token && step !== "done" && step !== "payment") {
       );
 
       if (error || !paymentIntent) {
-        alert(error?.message || "Zahlung konnte nicht bestätigt werden. Bitte versuchen Sie es erneut.");
+        setBookingMsg({ type: "error", text: error?.message || "Zahlung konnte nicht bestätigt werden. Bitte versuchen Sie es erneut." });
         return;
       }
 
@@ -526,24 +528,30 @@ if (!token && step !== "done" && step !== "payment") {
       });
 
       if (saveRes.ok) {
-        alert("✅ Termin gebucht & Zahlung erfolgreich!");
-        setPendingBooking(null);
+        setBookingMsg({ type: "success", text: "Termin gebucht & Zahlung erfolgreich!" });
         setBookingVoucher("");
         setBookingVoucherResult(null);
-        setForm({ date: null, time: "", hours: 2, service: "", subService: "", services: [], subServices: [] });
         fetchAppointments(userData.id);
+        // Keep the success message visible briefly, then close the widget.
+        setTimeout(() => {
+          setPendingBooking(null);
+          setForm({ date: null, time: "", hours: 2, service: "", subService: "", services: [], subServices: [] });
+          setBookingMsg(null);
+        }, 1800);
       } else {
-        alert("❌ Fehler beim Speichern des Termins");
+        setBookingMsg({ type: "error", text: "Fehler beim Speichern des Termins." });
       }
     } catch (err) {
-      alert("Fehler bei der Zahlung.");
+      setBookingMsg({ type: "error", text: "Fehler bei der Zahlung." });
     }
   };
   const [editingCard, setEditingCard] = useState(false);
 const [cardLoading, setCardLoading] = useState(false);
+const [cardMsg, setCardMsg] = useState(null); // A6: inline statt alert()
 
 
 async function handleUpdateCard() {
+  setCardMsg(null);
   setCardLoading(true);
 
   // 1) Create Stripe payment method
@@ -553,7 +561,7 @@ async function handleUpdateCard() {
   });
 
   if (error) {
-    alert(error.message);
+    setCardMsg({ type: "error", text: error.message });
     setCardLoading(false);
     return;
   }
@@ -573,11 +581,11 @@ async function handleUpdateCard() {
   setCardLoading(false);
 
   if (data.success) {
-    alert("Zahlungsmethode erfolgreich aktualisiert!");
-    setEditingCard(false);
+    setCardMsg({ type: "success", text: "Zahlungsmethode erfolgreich aktualisiert!" });
     fetchPaymentMethod(); // Rifresko kartën e re
+    setTimeout(() => { setEditingCard(false); setCardMsg(null); }, 1500);
   } else {
-    alert("Fehler: Zahlungsmethode konnte nicht gespeichert werden.");
+    setCardMsg({ type: "error", text: "Zahlungsmethode konnte nicht gespeichert werden." });
   }
 }
 
@@ -1382,6 +1390,11 @@ await fetchAppointments(userId);
                       <span>Ich akzeptiere die <a href="/AVB" target="_blank" className="underline text-[#04436F]">AGB</a></span>
                     </label>
                     {agbError && <p className="text-xs text-red-500">{agbError}</p>}
+                    {bookingMsg && (
+                      <div className={`text-sm rounded-xl px-4 py-3 border ${bookingMsg.type === "success" ? "bg-green-50 border-green-200 text-green-700" : "bg-red-50 border-red-200 text-red-700"}`}>
+                        {bookingMsg.text}
+                      </div>
+                    )}
 
                     <div className="flex gap-3">
                       <button

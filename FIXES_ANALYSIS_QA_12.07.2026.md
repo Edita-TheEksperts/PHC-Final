@@ -90,7 +90,7 @@ Stripe-Invoices, obwohl nur PaymentIntents existieren.
 
 **Follow-ups — jetzt umgesetzt bzw. bereitgestellt:**
 1. **E-Mail-Vorlagen:** Die Seed-Vorlagen nutzen bereits `{{greeting}}`; die eine verbliebene Rohanrede (`interviewReminder`) wurde in `prisma/seed-email-templates.js` auf `{{greeting}}` umgestellt. Die Bereinigung verwaister Zeilen liegt als **`prisma/cleanup-email-templates.sql`** bereit (bewusst NICHT ausgeführt — destruktive Prod-DB-Operation, nur nach Backup ausführen).
-2. **alert() → Inline:** Kartenwechsel (`dashboard/finanzen.js`) auf eine Inline-Meldung im Modal umgestellt. Die Re-Booking-`alert()`s im 1930-Zeilen-`client-dashboard.js` (kritische Zahlungslogik) wurden bewusst belassen — sie funktionieren; ein Umbau ist reine P3-Politur mit Bruchrisiko.
+2. **alert() → Inline:** vollständig umgesetzt. Kartenwechsel (`dashboard/finanzen.js`) und der Re-Booking-Flow (`client-dashboard.js`, `handleStripePayment`) zeigen jetzt Inline-Meldungen (Erfolg/Fehler) statt `alert()`. (Die `handleUpdateCard`-Funktion in `client-dashboard.js` ist ungenutzter Altcode — der echte Kartenwechsel läuft über `dashboard/finanzen.js`.)
 3. **Rohstatus-Audit durchgeführt:** Kunden-Dashboard, Mitarbeiter-Dashboard und Kundenliste rendern bereits deutsche Labels (`labelFor` / Badge-Logik). Einziger Rohstatus (Admin-Kundendetail-Dropdown) wurde auf deutsche Labels umgestellt.
 
 ## A7 — Serien-Zuweisung & Ersatz  (P0 Konzept — separater Build)
