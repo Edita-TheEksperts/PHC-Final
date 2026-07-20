@@ -140,7 +140,7 @@ const [form, setForm] = useState({
   city: "",
   kanton: "",     
   subServices: [],
-  schedules: [{ day: "", startTime: "08:00", hours: 2, subServices: [] }],
+  schedules: [{ day: "", startTime: "08:00", hours: 2, services: [], subServices: [] }],
   arrivalConditions: [],
   hasParking: "",
   entranceLocation: "",
@@ -154,6 +154,12 @@ allergyDetails: "",
   carePhone: "",
 });
 
+
+// Main categories are chosen per day (form.schedules[i].services). form.services
+// is kept as the union across all days — it drives the /api/subservices option
+// pool and the step-1 validation, so it must never be set directly any more.
+const unionServices = (schedules) =>
+  Array.from(new Set((schedules || []).flatMap((s) => s.services || [])));
 
 const [sameAsEinsatzort, setSameAsEinsatzort] = useState(false);
 
@@ -227,10 +233,11 @@ useEffect(() => {
           day: prev.schedules[0]?.day || "",
           startTime: prev.schedules[0]?.startTime || "08:00",
           hours: 2,
+          services: prev.schedules[0]?.services || [],
           subServices: [],
         },
       ],
-      subServices: [], 
+      subServices: [],
     }));
   }
 }, [form.frequency]);
@@ -896,8 +903,16 @@ const handleNext = async () => {
     else if (frequency === "alle 2 Wochen") step = 14;
     else step = 7;
 
-    for (const { day, startTime, hours, serviceName, subServiceName } of schedules) {
+    for (const entry of schedules) {
+      const { day, startTime, hours } = entry;
       if (!day) continue;
+
+      // Each weekday carries its OWN categories and sub-services — they are no
+      // longer flattened into one booking-wide string.
+      const serviceName =
+        entry.serviceName ?? ((entry.services || []).join(", ") || null);
+      const subServiceName =
+        entry.subServiceName ?? ((entry.subServices || []).join(", ") || null);
 
       let date = new Date(firstDate);
       while (date.getDay() !== weekdays[day]) {
@@ -1084,17 +1099,25 @@ const handleNext = async () => {
         )
       );
 
-      const serviceNameStr = (form.services || []).join(", ") || null;
-      const subServiceNameStr = collectedSubservices.join(", ") || null;
+      // Weekly rows are already stamped per day by generateScheduleDates. The
+      // einmalig/monatlich branches build rows without service fields — those
+      // flows only ever have one schedule row, so fall back to that row's own
+      // selection (NOT a booking-wide join, which would leak one day's services
+      // onto every other day).
+      const firstDay = form.schedules?.[0] || {};
+      const fallbackServiceName = (firstDay.services || []).join(", ") || null;
+      const fallbackSubServiceName = (firstDay.subServices || []).join(", ") || null;
+
+      generatedSchedules = generatedSchedules.map((s) => ({
+        ...s,
+        serviceName: s.serviceName ?? fallbackServiceName,
+        subServiceName: s.subServiceName ?? fallbackSubServiceName,
+      }));
 
       const payload = {
         ...form,
         subServices: collectedSubservices,
-        schedules: generatedSchedules.map(s => ({
-          ...s,
-          serviceName: s.serviceName !== undefined ? s.serviceName : serviceNameStr,
-          subServiceName: s.subServiceName !== undefined ? s.subServiceName : subServiceNameStr,
-        })),
+        schedules: generatedSchedules,
       };
 
 const res = await fetch("/api/client-register-api", {
@@ -1379,10 +1402,18 @@ body: JSON.stringify({
         .map((s) => s.trim())
         .filter(Boolean);
 
-      setForm((prev) => ({
-        ...prev,
-        services: selected, 
-      }));
+      // Seed days that have no category yet; never overwrite a day the user
+      // has already configured.
+      setForm((prev) => {
+        const updatedSchedules = prev.schedules.map((sched) =>
+          (sched.services || []).length ? sched : { ...sched, services: selected }
+        );
+        return {
+          ...prev,
+          schedules: updatedSchedules,
+          services: unionServices(updatedSchedules),
+        };
+      });
     }
   }, [service]);
 
@@ -1399,19 +1430,6 @@ body: JSON.stringify({
 
     fetchAllServices();
   }, []);
-  useEffect(() => {
-    if (service) {
-      const selected = service
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
-
-      setForm((prev) => ({
-        ...prev,
-        services: selected, 
-      }));
-    }
-  }, [service]);
 const timeOptions = Array.from({ length: 48 }, (_, i) => {
   const hour = Math.floor(i / 2);
   const minute = i % 2 === 0 ? "00" : "30";
@@ -2060,7 +2078,10 @@ onChange={(date) => {
         onClick={() => {
           if (isEinmalig || isMonatlich) return;
           setForm((prev) => {
-            const baseSubServices = prev.schedules[0]?.subServices || [];
+            // Seed the new day's main categories from the first day so the grid
+            // isn't empty on arrival. Sub-services start empty — each day is
+            // chosen independently.
+            const baseServices = prev.schedules[0]?.services || [];
             // Default the new row's weekday to the next free one so users can't
             // accidentally submit empty days — that bug produced "every appointment
             // on the same weekday" because generateScheduleDates skips empty rows.
@@ -2081,6 +2102,7 @@ onChange={(date) => {
                   day: nextDay,
                   startTime: "08:00",
                   hours: 2,
+                  services: [...baseServices],
                   subServices: [],
                 },
               ].slice(0, 7),
@@ -2224,32 +2246,41 @@ onChange={(date) => {
               </h3>
               <div className="flex-1 overflow-y-auto p-6 space-y-3">
                 {allServices.map((srv) => {
-                  const isSelected = (form.services || []).includes(srv.name);
+                  const isSelected = (entry.services || []).includes(srv.name);
                   return (
                     <button
                       key={srv.id}
                       type="button"
                       onClick={() => {
-                        if (isSelected) {
-                          // Only allow removal if more than one service remains
-                          if ((form.services || []).length > 1) {
-                            const updatedServices = form.services.filter((s) => s !== srv.name);
-                            // Also remove all subservices belonging to this main service
+                        setForm((prev) => {
+                          const updatedSchedules = prev.schedules.map((sched, idx) => {
+                            // Only THIS day changes — other days keep their own
+                            // categories, so Freitag can be Alltagsbegleitung
+                            // while Montag is Gesundheitsfürsorge.
+                            if (idx !== i) return sched;
+                            const current = sched.services || [];
+                            if (!isSelected) {
+                              return { ...sched, services: [...current, srv.name] };
+                            }
+                            // Deselecting drops this day's sub-services for that
+                            // category too, but leaves every other day alone.
                             const subsToRemove = subServices
                               .filter((sub) => sub.parentService === srv.name)
                               .map((sub) => sub.name);
-                            const updatedSchedules = form.schedules.map((sched) => ({
+                            return {
                               ...sched,
+                              services: current.filter((s) => s !== srv.name),
                               subServices: (sched.subServices || []).filter(
                                 (s) => !subsToRemove.includes(s)
                               ),
-                            }));
-                            setForm((prev) => ({ ...prev, services: updatedServices, schedules: updatedSchedules }));
-                          }
-                        } else {
-                          const updated = [...form.services, srv.name];
-                          setForm((prev) => ({ ...prev, services: updated }));
-                        }
+                            };
+                          });
+                          return {
+                            ...prev,
+                            schedules: updatedSchedules,
+                            services: unionServices(updatedSchedules),
+                          };
+                        });
                       }}
                       className={`w-full px-4 py-2 text-sm border rounded-lg text-center transition-all duration-200 ${
                         isSelected
@@ -2264,8 +2295,15 @@ onChange={(date) => {
               </div>
             </div>
             <div className="flex-1">
+              {(entry.services || []).length === 0 && (
+                <p className="text-gray-500 text-sm">
+                  Bitte wählen Sie links eine Dienstleistung für diesen Tag aus.
+                </p>
+              )}
               <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                {subServices.map((sub) => {
+                {subServices
+                  .filter((sub) => (entry.services || []).includes(sub.parentService))
+                  .map((sub) => {
                   const isSelected = entry.subServices?.includes(sub.name);
                   return (
                  <button

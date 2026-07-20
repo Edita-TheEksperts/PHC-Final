@@ -87,6 +87,10 @@ export default async function handler(req, res) {
             startTime: s.startTime,
             hours: parseFloat(s.hours),
             date: s.date ? new Date(s.date) : parsedDate,
+            // Each day keeps its own categories/sub-services — the client picks
+            // these per weekday, so they must not be flattened booking-wide.
+            serviceName: s.serviceName ?? ((s.services || []).join(", ") || null),
+            subServiceName: s.subServiceName ?? ((s.subServices || []).join(", ") || null),
           }))
         }
       }
