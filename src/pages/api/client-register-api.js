@@ -287,8 +287,47 @@ const toStrAllowEmpty = (v) => {
           paymentIntentId,
           totalPayment,
           ...questionnaireData,
+          // The create branch below connects these, but it can never run (see
+          // the comment on schedules), so they were never linked in practice.
+          services: { set: serviceRecords.map((s) => ({ id: s.id })) },
+          subServices: { set: subServiceRecords.map((s) => ({ id: s.id })) },
         },
       });
+
+      // register-user-prepayment creates this user at step 3, BEFORE payment,
+      // using the raw form rows — one placeholder per weekday, all stamped with
+      // firstDate. So by the time we get here the user always exists, the
+      // `else` branch below is dead code, and the generated recurrence series
+      // in `schedulesCreate` used to be silently discarded. Replace the
+      // placeholders with the real series instead.
+      if (schedulesCreate.length) {
+        const existing = await prisma.schedule.findMany({
+          where: { userId: user.id },
+          select: {
+            id: true,
+            employeeId: true,
+            _count: { select: { Assignment: true, transactions: true } },
+          },
+        });
+        // Only drop rows nothing else depends on — never touch a schedule that
+        // has already been assigned, booked or billed.
+        const disposable = existing
+          .filter(
+            (s) =>
+              !s.employeeId &&
+              s._count.Assignment === 0 &&
+              s._count.transactions === 0
+          )
+          .map((s) => s.id);
+
+        if (disposable.length) {
+          await prisma.schedule.deleteMany({ where: { id: { in: disposable } } });
+        }
+
+        await prisma.schedule.createMany({
+          data: schedulesCreate.map((s) => ({ ...s, userId: user.id })),
+        });
+      }
     } else {
       const resetToken = crypto.randomBytes(32).toString("hex");
       const resetTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);

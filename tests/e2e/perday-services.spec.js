@@ -151,6 +151,22 @@ test("weekly booking keeps main services separate per day", async ({ page }) => 
   expect(freitag.length).toBeGreaterThan(0);
   expect(montag.length).toBeGreaterThan(0);
 
+  // Recurrence: a weekly booking must produce the full 10-year series per
+  // weekday, on distinct dates — not one placeholder row all stamped firstDate.
+  console.log(`schedules: ${user.schedules.length} (Freitag ${freitag.length}, Montag ${montag.length})`);
+  expect(freitag.length, "Freitag recurs weekly").toBeGreaterThan(500);
+  expect(montag.length, "Montag recurs weekly").toBeGreaterThan(500);
+
+  const freitagDates = new Set(freitag.map((s) => s.date?.toISOString()));
+  expect(freitagDates.size, "each occurrence has its own date").toBe(freitag.length);
+
+  // Every Freitag row must actually fall on a Friday (getDay() === 5).
+  const wrongWeekday = freitag.filter((s) => s.date && s.date.getUTCDay() !== 5);
+  expect(wrongWeekday.length, "all Freitag rows land on a Friday").toBe(0);
+
+  // Recurrence must not have flattened the per-day services back together.
+  expect([...new Set(freitag.map((s) => s.serviceName))]).toEqual([SEED]);
+
   const fServices = [...new Set(freitag.map((s) => s.serviceName))];
   const mServices = [...new Set(montag.map((s) => s.serviceName))];
   const fSubs = [...new Set(freitag.map((s) => s.subServiceName))];
