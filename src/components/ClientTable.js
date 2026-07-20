@@ -1,5 +1,6 @@
 import { useRouter } from "next/router";
 import { useState, useEffect } from "react";
+import { formatMatchBreakdown } from "../lib/statusLabels";
 
 function StatusBadge({ status }) {
   if (status === "Open")     return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-200"><span className="w-1.5 h-1.5 bg-green-500 rounded-full" />Offen</span>;
@@ -274,9 +275,12 @@ export default function ClientTable({ clients }) {
                 <li key={rec.employeeId} className="p-3 bg-gray-50 rounded-lg border border-gray-100">
                   <p className="font-medium text-sm text-gray-900">⭐ {rec.firstName} {rec.lastName} — {rec.score}%</p>
                   <ul className="mt-2 space-y-1">
-                    {rec.reasons.map((r, i) => (
-                      <li key={i} className="text-xs text-gray-600 flex gap-1.5"><span className="text-green-500 mt-0.5">•</span>{r}</li>
-                    ))}
+                    {formatMatchBreakdown(rec.breakdown, rec.reasons)
+                      .split(" · ")
+                      .filter(Boolean)
+                      .map((r, i) => (
+                        <li key={i} className="text-xs text-gray-600 flex gap-1.5"><span className="text-green-500 mt-0.5">•</span>{r}</li>
+                      ))}
                   </ul>
                 </li>
               ))}

@@ -73,6 +73,36 @@ export const CONFIRMATION_STATUS = {
   rejected:  { label: "Abgelehnt",              color: COLOR_RED },
 };
 
+// German labels for the matchmaking score breakdown (/api/admin/matchmaking
+// returns the raw English object keys). Keep in sync with the weights in that
+// file — the keys here are the keys of its `breakdown` object.
+export const MATCH_CRITERIA = {
+  availability: "Verfügbarkeit",
+  region:       "Region / Distanz",
+  services:     "Passende Leistungen",
+  language:     "Sprache",
+  experience:   "Erfahrung",
+  special:      "Spezielle Anforderungen",
+};
+
+// Turns { availability: 30, region: 25 } into "Verfügbarkeit: 30 · Region / Distanz: 25",
+// dropping zero-scored criteria. Falls back to the API's English `reasons`
+// array when an older response has no breakdown.
+export function formatMatchBreakdown(breakdown, fallbackReasons) {
+  if (breakdown && typeof breakdown === "object") {
+    const parts = Object.entries(breakdown)
+      .filter(([, v]) => v > 0)
+      .map(([k, v]) => `${MATCH_CRITERIA[k] || k}: ${v}`);
+    if (parts.length) return parts.join(" · ");
+  }
+  return (fallbackReasons || [])
+    .map((r) => {
+      const [k, v] = String(r).split(":").map((s) => s.trim());
+      return MATCH_CRITERIA[k] ? `${MATCH_CRITERIA[k]}: ${v}` : r;
+    })
+    .join(" · ");
+}
+
 export function labelFor(map, status) {
   if (!status) return "—";
   return map?.[status]?.label || status;

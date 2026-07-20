@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { formatMatchBreakdown } from "../lib/statusLabels";
 
 export default function Einsaetze() {
   const [data, setData] = useState(null);
@@ -294,7 +295,21 @@ export default function Einsaetze() {
                       {item.employee.firstName} {item.employee.lastName}
                     </a>
                   ) : (
-                    <span className="text-amber-600 font-medium">Nicht zugewiesen</span>
+                    // Explicit call to action — the whole row is clickable, but
+                    // that isn't discoverable, so surface the primary action.
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedItem(item);
+                        setAssignMsg({ type: "", text: "" });
+                        setAssignLoading(false);
+                        setRecommendations([]);
+                      }}
+                      className="text-xs px-3 py-1.5 rounded-md border border-[#04436F] text-[#04436F] font-medium hover:bg-[#04436F] hover:text-white transition whitespace-nowrap"
+                    >
+                      Mitarbeiter zuweisen
+                    </button>
                   )}
                 </td>
                 <td className="px-4 py-3">{statusBadge(item.status)}</td>
@@ -416,8 +431,10 @@ export default function Einsaetze() {
 
       {/* Details modal */}
       {selectedItem && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-xl w-full max-w-lg shadow-xl border border-gray-100">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          {/* Capped to the viewport and scrollable — with 5 recommendations the
+              card used to grow past the screen with no way to reach the footer. */}
+          <div className="bg-white p-5 rounded-xl w-full max-w-md shadow-xl border border-gray-100 max-h-[90vh] overflow-y-auto">
             <h2 className="text-base font-semibold text-gray-900 mb-4">Einsatz Details</h2>
 
             <div className="space-y-2 text-sm bg-gray-50 rounded-lg p-4 border border-gray-100">
@@ -477,7 +494,9 @@ export default function Einsaetze() {
                   {!recsLoaded && <p className="text-xs text-gray-400 italic">Lade Empfehlungen...</p>}
                   {recsLoaded && recommendations.length === 0 && <p className="text-xs text-amber-600 italic">Keine passenden Empfehlungen gefunden.</p>}
                   {recommendations.length > 0 && (
-                    <div className="space-y-2">
+                    // Own scroll area so a long candidate list can't push the
+                    // Schliessen/Bearbeiten footer out of reach.
+                    <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
                       {recommendations.map((r) => {
                         const score = Math.max(0, Math.min(100, r.score || 0));
                         const tone = score >= 70 ? "emerald" : score >= 40 ? "amber" : "gray";
@@ -500,8 +519,10 @@ export default function Einsaetze() {
                                 {(r.city || r.canton) && (
                                   <p className={`text-[11px] mt-1 ${tones.soft}`}>📍 {[r.city, r.canton].filter(Boolean).join(" · ")}</p>
                                 )}
-                                {r.reasons?.length > 0 && (
-                                  <p className={`text-[11px] mt-0.5 ${tones.soft}`}>{r.reasons.join(" · ")}</p>
+                                {formatMatchBreakdown(r.breakdown, r.reasons) && (
+                                  <p className={`text-[11px] mt-0.5 ${tones.soft}`}>
+                                    {formatMatchBreakdown(r.breakdown, r.reasons)}
+                                  </p>
                                 )}
                               </div>
                               <button
